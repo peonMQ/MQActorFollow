@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package mq.proto.actorfollowee;
+
+enum MessageId {
+	NoOp = 0;
+	Subscribe = 1;
+	UnSubscribe = 2;
+	PositionUpdate = 3;
+}
+
+message Position {
+	uint32 spawnid = 1;
+	string name = 2;
+	uint32 zoneid = 3;
+	float x = 4;
+	float y = 5;
+	float z = 6;
+	float heading = 7;
+}
+
+message Message {
+	MessageId id = 1;
+	optional Position position = 2;
+}
