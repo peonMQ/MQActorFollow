@@ -13,42 +13,22 @@ using namespace mq::proto::actorfollowee;
 PreSetup("MQActorFollow");
 PLUGIN_VERSION(0.1);
 
-/**
- * Avoid Globals if at all possible, since they persist throughout your program.
- * But if you must have them, here is the place to put them.
- */
- // bool ShowMQActorAdvPathWindow = true;
-
-static std::chrono::steady_clock::time_point PulseTimer = std::chrono::steady_clock::now();
-static std::chrono::steady_clock::time_point OpenDoorTimer = std::chrono::steady_clock::now();
-static std::chrono::steady_clock::time_point StuckTimer = std::chrono::steady_clock::now();
-
-float m_stuckX = 0;
-float m_stuckY = 0;
-
-enum class FOLLOW {
-	OFF = 0,
-	ON = 1,
-};
-
-enum class STATUS {
+enum class FollowState {
 	OFF = 0,
 	ON = 1,
 	PAUSED = 2
 };
 
-
-enum struct DoorState {
+enum class DoorState {
 	Closed = 0,
 	Open = 1,
 	Opening = 2,
 	Closing = 3
 };
 
-const int MIN_DISTANCE_BETWEEN_POINTS = 5;
+constexpr int MIN_DISTANCE_BETWEEN_POINTS = 5;
 const std::chrono::milliseconds UPDATE_TICK_MILLISECONDS = std::chrono::milliseconds(250);
-FOLLOW FollowState = FOLLOW::OFF;
-STATUS StatusState = STATUS::OFF;
+FollowState FollowingState = FollowState::OFF;
 
 postoffice::Address subscription;
 
@@ -85,18 +65,18 @@ public:
 			return true;
 		case MQActorFollowType::Status:
 			Dest.Type = mq::datatypes::pIntType;
-			Dest.Int = static_cast<int>(StatusState);
+			Dest.Int = static_cast<int>(FollowingState);
 			return true;
 		case MQActorFollowType::WaypointsCount:
 			Dest.Type = mq::datatypes::pIntType;
 			Dest.Int = Subscribers.size();
 			return true;
 		case MQActorFollowType::IsFollowing:
-			Dest.DWord = (FollowState == FOLLOW::ON);
+			Dest.DWord = (FollowingState == FollowState::ON);
 			Dest.Type = mq::datatypes::pBoolType;
 			return true;
 		case MQActorFollowType::IsPaused:
-			Dest.DWord = (StatusState == STATUS::PAUSED);
+			Dest.DWord = (FollowingState == FollowState::PAUSED);
 			Dest.Type = mq::datatypes::pBoolType;
 			return true;
 		}
@@ -139,7 +119,15 @@ void ReceivedMessageHandler(const std::shared_ptr<postoffice::Message>& message)
 			}), Subscribers.end());
 		break;
 	case mq::proto::actorfollowee::MessageId::PositionUpdate:
+		if (!(GetCharInfo()->pSpawn && GetPcProfile())) {
+			return;
+		}
+
 		auto newposition = advPathMessage.position();
+		if (GetCharInfo()->pSpawn->Zone != newposition.zoneid()) {
+			return;
+		}
+
 		if (Positions.empty()) {
 			Positions.push(std::make_shared<mq::proto::actorfollowee::Position>(newposition));
 		}
@@ -261,15 +249,13 @@ void StopMoving() {
 void StartFollowing(PlayerClient* pSpawn) {
 	WriteChatf("[MQActorFollow] Following \ay%s\ax.", pSpawn->Name);
 	Post(pSpawn->Name, proto::actorfollowee::MessageId::Subscribe);
-	FollowState = FOLLOW::ON;
-	StatusState = STATUS::ON;
+	FollowingState = FollowState::ON;
 }
 
 void EndFollowing() {
 	if (subscription.Character) {
 		StopMoving();
-		FollowState = FOLLOW::OFF;
-		StatusState = STATUS::OFF;
+		FollowingState = FollowState::OFF;
 		std::queue<std::shared_ptr<proto::actorfollowee::Position>>().swap(Positions);
 		Post(subscription, proto::actorfollowee::MessageId::UnSubscribe);
 		WriteChatf("[MQActorFollow] Stopped following \ay%s\ax.", subscription.Character.value().c_str());
@@ -307,14 +293,14 @@ void FollowCommand(SPAWNINFO* pChar, char* szLine) {
 		EndFollowing();
 	}
 	else if (ci_equals(szArg1, "pause")) {
-		if (FollowState == FOLLOW::ON) {
-			StatusState = STATUS::PAUSED;
+		if (FollowingState == FollowState::ON) {
+			FollowingState = FollowState::PAUSED;
 			WriteChatf("[MQActorFollow] Paused following.");
 		}
 	}
 	else if (ci_equals(szArg1, "resume")) {
-		if (FollowState == FOLLOW::ON) {
-			StatusState = STATUS::ON;
+		if (FollowingState == FollowState::PAUSED) {
+			FollowingState = FollowState::ON;
 			WriteChatf("[MQActorFollow] Resumed following.");
 		}
 	}
@@ -392,6 +378,8 @@ void LookAt(float x, float y, float z) {
 
 void AttemptToOpenDoor()
 {
+	static std::chrono::steady_clock::time_point OpenDoorTimer = std::chrono::steady_clock::now();
+
 	// don't execute if we've got an item on the cursor.
 	if (GetPcProfile()->GetInventorySlot(InvSlot_Cursor))
 		return;
@@ -414,7 +402,11 @@ void AttemptToOpenDoor()
 
 void StuckCheck()
 {
-	if (StatusState != STATUS::ON)
+	static std::chrono::steady_clock::time_point StuckTimer = std::chrono::steady_clock::now();
+
+	static float m_stuckX = 0;
+	static float m_stuckY = 0;
+	if (FollowingState != FollowState::ON)
 		return;
 
 	auto now = std::chrono::steady_clock::now();
@@ -433,7 +425,7 @@ void StuckCheck()
 			&& !GetCharInfo()->pSpawn->mPlayerPhysicsClient.Levitate
 			&& !GetCharInfo()->pSpawn->UnderWater
 			&& !GetCharInfo()->Stunned
-			&& StatusState == STATUS::ON)
+			&& FollowingState == FollowState::ON)
 		{
 			ExecuteCmd(CMD_JUMP, 1, 0);
 			ExecuteCmd(CMD_JUMP, 0, 0);
@@ -445,13 +437,13 @@ void StuckCheck()
 }
 
 void TryFollowActor() {
-	if (Positions.size() && StatusState == STATUS::ON) {
+	if (Positions.size() && FollowingState == FollowState::ON) {
 		auto pSpawn = GetCharInfo()->pSpawn;
 		auto position = Positions.front();
 		if (position->zoneid() == pSpawn->Zone) {
 			auto distance3d = GetDistance3D(pSpawn->X, pSpawn->Y, pSpawn->Z, position->x(), position->y(), position->z());
 			if (distance3d > 50) {
-				WriteChatf("[MQActorFollow] Possible warp detected, exiting...");
+				WriteChatf("[MQActorFollow] Possible warp detected, exiting (\aw%s\ax)...", distance3d);
 				EndFollowing();
 				return;
 			}
@@ -472,12 +464,6 @@ void TryFollowActor() {
 	}
 }
 
-/**
- * @fn InitializePlugin
- *
- * This is called once on plugin initialization and can be considered the startup
- * routine for the plugin.
- */
 PLUGIN_API void InitializePlugin()
 {
 	DebugSpewAlways("[MQActorFollow]::Initializing version %.2f", MQ2Version);
@@ -494,12 +480,6 @@ PLUGIN_API void InitializePlugin()
 	WriteChatf("[MQActorFollow] \ayv%.2f\ax", MQ2Version);
 }
 
-/**
- * @fn ShutdownPlugin
- *
- * This is called once when the plugin has been asked to shutdown.  The plugin has
- * not actually shut down until this completes.
- */
 PLUGIN_API void ShutdownPlugin()
 {
 	DebugSpewAlways("[MQActorFollow]:: Shutting down");
@@ -510,42 +490,17 @@ PLUGIN_API void ShutdownPlugin()
 	//ClearAll();
 }
 
-/**
- * @fn SetGameState
- *
- * This is called when the GameState changes.  It is also called once after the
- * plugin is initialized.
- *
- * For a list of known GameState values, see the constants that begin with
- * GAMESTATE_.  The most commonly used of these is GAMESTATE_INGAME.
- *
- * When zoning, this is called once after @ref OnBeginZone @ref OnRemoveSpawn
- * and @ref OnRemoveGroundItem are all done and then called once again after
- * @ref OnEndZone and @ref OnAddSpawn are done but prior to @ref OnAddGroundItem
- * and @ref OnZoned
- *
- * @param GameState int - The value of GameState at the time of the call
- */
 PLUGIN_API void SetGameState(int GameState)
 {
-	// DebugSpewAlways("MQActorFollow::SetGameState(%d)", GameState);
 	if (GameState == GAMESTATE_CHARSELECT) {
 		Subscribers.clear();
 		EndFollowing();
 	}
 }
 
-/**
- * @fn OnPulse
- *
- * This is called each time MQ2 goes through its heartbeat (pulse) function.
- *
- * Because this happens very frequently, it is recommended to have a timer or
- * counter at the start of this call to limit the amount of times the code in
- * this section is executed.
- */
 PLUGIN_API void OnPulse()
 {
+	static std::chrono::steady_clock::time_point PulseTimer = std::chrono::steady_clock::now();
 	if (GetGameState() == GAMESTATE_INGAME) {
 		// Run only after timer is up
 		if (std::chrono::steady_clock::now() > PulseTimer) {
@@ -556,98 +511,12 @@ PLUGIN_API void OnPulse()
 	}
 }
 
-/**
- * @fn OnIncomingChat
- *
- * This is called each time a line of chat is shown.  It occurs after MQ filters
- * and chat events have been handled.  If you need to know when MQ2 has sent chat,
- * consider using @ref OnWriteChatColor instead.
- *
- * For a list of Color values, see the constants for USERCOLOR_. The default is
- * USERCOLOR_DEFAULT.
- *
- * @param Line const char* - The line of text that was shown
- * @param Color int - The type of chat text this was sent as
- *
- * @return bool - Whether to filter this chat from display
- */
 PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color)
 {
-	if (!_stricmp(Line, "You have been summoned!") && FollowState == FOLLOW::ON) {
+	if (!_stricmp(Line, "You have been summoned!") && FollowingState == FollowState::ON) {
 		WriteChatf("[MQActorFollow]:: Summon detected");
 		EndFollowing();
 	}
 
 	return false;
-}
-
-/**
- * @fn OnAddSpawn
- *
- * This is called each time a spawn is added to a zone (ie, something spawns). It is
- * also called for each existing spawn when a plugin first initializes.
- *
- * When zoning, this is called for all spawns in the zone after @ref OnEndZone is
- * called and before @ref OnZoned is called.
- *
- * @param pNewSpawn PSPAWNINFO - The spawn that was added
- */
-PLUGIN_API void OnAddSpawn(PSPAWNINFO pNewSpawn)
-{
-	// DebugSpewAlways("MQActorFollow::OnAddSpawn(%s)", pNewSpawn->Name);
-}
-
-/**
- * @fn OnRemoveSpawn
- *
- * This is called each time a spawn is removed from a zone (ie, something despawns
- * or is killed).  It is NOT called when a plugin shuts down.
- *
- * When zoning, this is called for all spawns in the zone after @ref OnBeginZone is
- * called.
- *
- * @param pSpawn PSPAWNINFO - The spawn that was removed
- */
-PLUGIN_API void OnRemoveSpawn(PSPAWNINFO pSpawn)
-{
-	// DebugSpewAlways("MQActorFollow::OnRemoveSpawn(%s)", pSpawn->Name);
-}
-
-/**
- * @fn OnBeginZone
- *
- * This is called just after entering a zone line and as the loading screen appears.
- */
-PLUGIN_API void OnBeginZone()
-{
-	// DebugSpewAlways("MQActorFollow::OnBeginZone()");
-	//Subscribers.clear();
-	//EndFollowing();
-}
-
-/**
- * @fn OnEndZone
- *
- * This is called just after the loading screen, but prior to the zone being fully
- * loaded.
- *
- * This should occur before @ref OnAddSpawn and @ref OnAddGroundItem are called. It
- * always occurs before @ref OnZoned is called.
- */
-PLUGIN_API void OnEndZone()
-{
-	// DebugSpewAlways("MQActorFollow::OnEndZone()");
-}
-
-/**
- * @fn OnZoned
- *
- * This is called after entering a new zone and the zone is considered "loaded."
- *
- * It occurs after @ref OnEndZone @ref OnAddSpawn and @ref OnAddGroundItem have
- * been called.
- */
-PLUGIN_API void OnZoned()
-{
-	// DebugSpewAlways("MQActorFollow::OnZoned()");
 }
