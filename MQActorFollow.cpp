@@ -27,6 +27,7 @@ enum class DoorState {
 };
 
 constexpr int MIN_DISTANCE_BETWEEN_POINTS = 5;
+constexpr int WARP_ALERT_DISTANCE = 50;
 const std::chrono::milliseconds UPDATE_TICK_MILLISECONDS = std::chrono::milliseconds(250);
 FollowState FollowingState = FollowState::OFF;
 
@@ -90,7 +91,7 @@ public:
 	}
 };
 
-bool dataActorBots(const char* szIndex, MQTypeVar& Ret) {
+bool DataActorFollow(const char* szIndex, MQTypeVar& Ret) {
 	Ret.Type = pMQActorAdvPathType;
 	return true;
 }
@@ -152,20 +153,18 @@ static void Post(postoffice::Address address, mq::proto::actorfollowee::MessageI
 	DropBox.Post(address, message);
 }
 
-static void Post(std::string reciever, mq::proto::actorfollowee::MessageId messageId)
-{
+static void SetSubscription(std::string reciever) {
 	subscription.Server = GetServerShortName();
 	subscription.Character = reciever;
-	Post(subscription, messageId, std::nullopt);
 }
 
-void SendPositionUpdate()
+void SendPositionUpdate(PcClient* pcClient)
 {
-	if (!(GetCharInfo()->pSpawn && GetPcProfile())) {
+	if (Subscribers.empty() || !pcClient) {
 		return;
 	}
 
-	if (auto pSpawn = GetCharInfo()->pSpawn) {
+	if (auto pSpawn = pcClient->pSpawn) {
 		proto::actorfollowee::Position newposition;
 		newposition.set_spawnid(pSpawn->SpawnID);
 		newposition.set_name(pSpawn->Name);
@@ -246,9 +245,21 @@ void StopMoving() {
 	ReleaseKeys();
 }
 
+void TryJump(PcClient* pcClient) {
+	auto playerClient = pcClient->pSpawn;
+	if (!playerClient->mPlayerPhysicsClient.Levitate
+		&& !playerClient->UnderWater
+		&& !pcClient->Stunned)
+	{
+		ExecuteCmd(CMD_JUMP, 1, 0);
+		ExecuteCmd(CMD_JUMP, 0, 0);
+	}
+}
+
 void StartFollowing(PlayerClient* pSpawn) {
 	WriteChatf("[MQActorFollow] Following \ay%s\ax.", pSpawn->Name);
-	Post(pSpawn->Name, proto::actorfollowee::MessageId::Subscribe);
+	SetSubscription(pSpawn->Name);
+	Post(subscription, proto::actorfollowee::MessageId::Subscribe);
 	FollowingState = FollowState::ON;
 }
 
@@ -264,7 +275,7 @@ void EndFollowing() {
 	}
 }
 
-void FollowCommand(SPAWNINFO* pChar, char* szLine) {
+void FollowCommandHandler(SPAWNINFO* pChar, char* szLine) {
 	if (szLine && szLine[0] == '\0')
 	{
 		WriteChatf("[MQActorFollow] Usage:");
@@ -335,32 +346,24 @@ void FollowCommand(SPAWNINFO* pChar, char* szLine) {
 	}
 }
 
-void LookAt(float x, float y, float z) {
-	if (PCHARINFO pChar = GetCharInfo())
+void LookAt(PcClient* pChar, CVector3 position) {
+	if (pChar)
 	{
 		if (auto spawn = pChar->pSpawn)
 		{
-			gFaceAngle = (atan2(x - spawn->X, y - spawn->Y) * 256.0f / PI);
+			DoFace(spawn, position);
 
-			if (gFaceAngle >= 512.0f) {
-				gFaceAngle -= 512.0f;
-			}
-
-			if (gFaceAngle < 0.0f) {
-				gFaceAngle += 512.0f;
-			}
-
-			pCharSpawn->Heading = (float)gFaceAngle;
+			pLocalPlayer->Heading = (float)gFaceAngle;
 			gFaceAngle = 10000.0f;
 
 			if (spawn->FeetWet || spawn->UnderWater == 5) {
-				spawn->CameraAngle = (float)(atan2(z - spawn->Z, (float)GetDistance(spawn->X, spawn->Y, x, y)) * 256.0f / PI);
+				spawn->CameraAngle = (float)(atan2(position.Z - spawn->Z, (float)GetDistance(spawn->X, spawn->Y, position.X, position.Y)) * 256.0f / PI);
 			}
 			else if (spawn->mPlayerPhysicsClient.Levitate == 2) {
-				if (z < spawn->Z - 5) {
+				if (position.Z < spawn->Z - 5) {
 					spawn->CameraAngle = -45.0f;
 				}
-				else if (z > spawn->Z + 5) {
+				else if (position.Z > spawn->Z + 5) {
 					spawn->CameraAngle = 45.0f;
 				}
 				else {
@@ -399,65 +402,73 @@ void AttemptToOpenDoor()
 }
 
 
-
-void StuckCheck()
-{
+bool IsStuck(PcClient* pcClient) {
 	static std::chrono::steady_clock::time_point StuckTimer = std::chrono::steady_clock::now();
-
-	static float m_stuckX = 0;
-	static float m_stuckY = 0;
-	if (FollowingState != FollowState::ON)
-		return;
+	static float previousX = 0;
+	static float previousY = 0;
 
 	auto now = std::chrono::steady_clock::now();
 	if (now > StuckTimer) {
-		return;
+		return false;
 	}
 
+	auto playerClient = pcClient->pSpawn;
+	auto isStuck = false;
 	// check every 100 ms
 	StuckTimer = now + std::chrono::milliseconds(100);
 
-	if (GetCharInfo())
+	if (playerClient->SpeedMultiplier != -10000
+		&& FindSpeed(playerClient)
+		&& (GetDistance(previousX, previousY) <= FindSpeed(playerClient) / 600)
+		&& !pcClient->Stunned
+		&& FollowingState == FollowState::ON)
 	{
-		if (GetCharInfo()->pSpawn->SpeedMultiplier != -10000
-			&& FindSpeed(GetCharInfo()->pSpawn)
-			&& (GetDistance(m_stuckX, m_stuckY) < FindSpeed(GetCharInfo()->pSpawn) / 600)
-			&& !GetCharInfo()->pSpawn->mPlayerPhysicsClient.Levitate
-			&& !GetCharInfo()->pSpawn->UnderWater
-			&& !GetCharInfo()->Stunned
-			&& FollowingState == FollowState::ON)
-		{
-			ExecuteCmd(CMD_JUMP, 1, 0);
-			ExecuteCmd(CMD_JUMP, 0, 0);
-		}
-
-		m_stuckX = GetCharInfo()->pSpawn->X;
-		m_stuckY = GetCharInfo()->pSpawn->Y;
+		isStuck = true;
 	}
+
+	previousX = playerClient->X;
+	previousY = playerClient->Y;
+	return isStuck;
 }
 
-void TryFollowActor() {
-	if (Positions.size() && FollowingState == FollowState::ON) {
-		auto pSpawn = GetCharInfo()->pSpawn;
-		auto position = Positions.front();
-		if (position->zoneid() == pSpawn->Zone) {
-			auto distance3d = GetDistance3D(pSpawn->X, pSpawn->Y, pSpawn->Z, position->x(), position->y(), position->z());
-			if (distance3d > 50) {
-				WriteChatf("[MQActorFollow] Possible warp detected, exiting (\aw%s\ax)...", distance3d);
-				EndFollowing();
-				return;
-			}
+std::shared_ptr<proto::actorfollowee::Position> GetNextDestination()
+{
+	if (Positions.empty()) {
+		return nullptr;
+	}
 
-			if (GetDistance(pSpawn->X, pSpawn->Y, position->x(), position->y()) > MIN_DISTANCE_BETWEEN_POINTS) {
-				LookAt(position->x(), position->y(), position->z());
-				MoveForward(true);
-				AttemptToOpenDoor();
-				StuckCheck();
-			}
-			else {
-				Positions.pop();
-				if (Positions.empty()) {
-					StopMoving();
+	return Positions.front();
+}
+
+void TryFollowActor(PcClient* pcClient) {
+	if (pcClient && FollowingState == FollowState::ON)
+	{
+		if (auto pSpawn = pcClient->pSpawn)
+		{
+			if (auto destination = GetNextDestination()) {
+				if (destination->zoneid() == pSpawn->Zone) {
+					auto position = CVector3{ destination->x(), destination->y(), destination->z() };
+					auto distance3d = GetDistance3D(pSpawn->X, pSpawn->Y, pSpawn->Z, position.X, position.Y, position.Z);
+					if (distance3d > WARP_ALERT_DISTANCE) {
+						WriteChatf("[MQActorFollow] Possible warp detected, exiting (\aw%s\ax)...", distance3d);
+						EndFollowing();
+						return;
+					}
+
+					if (distance3d > MIN_DISTANCE_BETWEEN_POINTS) {
+						LookAt(pcClient, position);
+						MoveForward(true);
+						AttemptToOpenDoor();
+						if (IsStuck(pcClient)) {
+							TryJump(pcClient);
+						}
+					}
+					else {
+						Positions.pop();
+						if (Positions.empty()) {
+							StopMoving();
+						}
+					}
 				}
 			}
 		}
@@ -472,10 +483,9 @@ PLUGIN_API void InitializePlugin()
 
 	DropBox = postoffice::AddActor(ReceivedMessageHandler);
 
-	// Examples:
-	AddCommand("/actfollow", FollowCommand);
+	AddCommand("/actfollow", FollowCommandHandler);
 	pMQActorAdvPathType = new MQActorFollowType;
-	AddMQ2Data("ActorFollow", dataActorBots);
+	AddMQ2Data("ActorFollow", DataActorFollow);
 
 	WriteChatf("[MQActorFollow] \ayv%.2f\ax", MQ2Version);
 }
@@ -487,12 +497,11 @@ PLUGIN_API void ShutdownPlugin()
 	RemoveCommand("/actfollow");
 	RemoveMQ2Data("ActorFollow");
 	delete pMQActorAdvPathType;
-	//ClearAll();
 }
 
-PLUGIN_API void SetGameState(int GameState)
+PLUGIN_API void SetGameState(int gameState)
 {
-	if (GameState == GAMESTATE_CHARSELECT) {
+	if (gameState != GAMESTATE_INGAME) {
 		Subscribers.clear();
 		EndFollowing();
 	}
@@ -502,12 +511,14 @@ PLUGIN_API void OnPulse()
 {
 	static std::chrono::steady_clock::time_point PulseTimer = std::chrono::steady_clock::now();
 	if (GetGameState() == GAMESTATE_INGAME) {
-		// Run only after timer is up
-		if (std::chrono::steady_clock::now() > PulseTimer) {
-			PulseTimer = std::chrono::steady_clock::now() + UPDATE_TICK_MILLISECONDS;
-			SendPositionUpdate();
+		if (auto pcClient = GetCharInfo()) {
+			// Run only after timer is up
+			if (std::chrono::steady_clock::now() > PulseTimer) {
+				PulseTimer = std::chrono::steady_clock::now() + UPDATE_TICK_MILLISECONDS;
+				SendPositionUpdate(pcClient);
+			}
+			TryFollowActor(pcClient);
 		}
-		TryFollowActor();
 	}
 }
 
