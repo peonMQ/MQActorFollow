@@ -26,7 +26,7 @@ enum class DoorState {
 	Closing = 3
 };
 
-constexpr int MIN_DISTANCE_BETWEEN_POINTS = 5;
+constexpr int MIN_DISTANCE_BETWEEN_POINTS = 10;
 constexpr int WARP_ALERT_DISTANCE = 50;
 const std::chrono::milliseconds UPDATE_TICK_MILLISECONDS = std::chrono::milliseconds(250);
 FollowState FollowingState = FollowState::OFF;
@@ -449,9 +449,10 @@ void TryFollowActor(PcClient* pcClient) {
 				if (destination->zoneid() == pSpawn->Zone) {
 					auto position = CVector3{ destination->x(), destination->y(), destination->z() };
 					auto distance3d = GetDistance3D(pSpawn->X, pSpawn->Y, pSpawn->Z, position.X, position.Y, position.Z);
-					if (distance3d > WARP_ALERT_DISTANCE) {
-						WriteChatf("[MQActorFollow] Possible warp detected, exiting (\aw%s\ax)...", distance3d);
-						EndFollowing();
+					if (distance3d < 0 || distance3d > WARP_ALERT_DISTANCE) {
+						WriteChatf("[MQActorFollow] Possible warp detected, exiting (\aw%d\ax)...", distance3d);
+						StopMoving();
+						Positions.pop();
 						return;
 					}
 
