@@ -11,7 +11,7 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe</Extensions>
     </Filter>
     <Filter Include="Proto Files">
-      <UniqueIdentifier>{4d19509c-4f96-4421-bdf5-c338f2295b15}</UniqueIdentifier>
+      <Extensions>proto</Extensions>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -39,7 +39,7 @@
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
-    <ProtocolBuffer Include="..\MQActorFollow\ActorFollowee.proto">
+    <ProtocolBuffer Include="ActorFollowee.proto">
       <Filter>Proto Files</Filter>
     </ProtocolBuffer>
   </ItemGroup>
