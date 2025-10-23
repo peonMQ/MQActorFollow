@@ -14,8 +14,10 @@
 
 #pragma once
 
+#include <mq/Plugin.h>
 #include "routing/PostOffice.h"
 #include "MQActorFollowUI.h"
+#include "Subscription.h"
 
 #include <Windows.h>
 #include <wincrypt.h>
@@ -27,17 +29,6 @@
 #endif
 
 #pragma comment(lib, "login")
-
-std::vector<std::shared_ptr<postoffice::Address>> Subscribers;
-std::queue<std::shared_ptr<proto::actorfollowee::Position>> Positions;
-postoffice::DropboxAPI DropBox;
-
-static void Post(postoffice::Address address, mq::proto::actorfollowee::MessageId messageId, const std::optional<proto::actorfollowee::Position>& data, const std::function<void(int, const std::shared_ptr<postoffice::Message>&)>& callback = nullptr);
-
-void MoveForward(bool hold);
-void MoveBackwards(bool hold);
-void StrafeLeft(bool hold);
-void StrafeRight(bool hold);
 
 template <typename T>
 std::vector<std::shared_ptr<T>> queueToVector(const std::queue<std::shared_ptr<T>>& q) {

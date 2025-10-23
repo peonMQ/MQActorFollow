@@ -15,4 +15,6 @@ enum class TabPage {
 	Max
 };
 
-void RenderUI(bool* p_open, const std::vector<std::shared_ptr<postoffice::Address>>& subscribers, const std::vector<std::shared_ptr<proto::actorfollowee::Position>>& waypoints);
+static bool ShowMQActorFollowWindow = true;
+
+void RenderUI(const std::vector<std::shared_ptr<postoffice::Address>>& subscribers, const std::vector<std::shared_ptr<proto::actorfollowee::Position>>& waypoints);

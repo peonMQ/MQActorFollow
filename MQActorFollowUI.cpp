@@ -200,8 +200,8 @@ void PerformUpdateTab(TabPage page, const std::vector<std::shared_ptr<postoffice
 	}
 }
 
-void RenderUI(bool* p_open, const std::vector<std::shared_ptr<postoffice::Address>>& subscribers, const std::vector<std::shared_ptr<proto::actorfollowee::Position>>& waypoints) {
-	if (ImGui::Begin("MQActorFollow", p_open, 0))
+void RenderUI(const std::vector<std::shared_ptr<postoffice::Address>>& subscribers, const std::vector<std::shared_ptr<proto::actorfollowee::Position>>& waypoints) {
+	if (ImGui::Begin("MQActorFollow", &ShowMQActorFollowWindow, 0))
 	{
 		if (ImGui::BeginTabBar("##main", ImGuiTabBarFlags_NoCloseWithMiddleMouseButton | ImGuiTabBarFlags_FittingPolicyScroll))
 		{
