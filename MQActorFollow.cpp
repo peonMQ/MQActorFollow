@@ -14,7 +14,7 @@ PreSetup("MQActorFollow");
 PLUGIN_VERSION(0.2);
 
 const std::chrono::milliseconds UPDATE_TICK_MILLISECONDS = std::chrono::milliseconds(250);
-
+static bool ShowMQActorFollowWindow = true;
 
 class MQActorFollowType* pMQActorAdvPathType = nullptr;
 class MQActorFollowType : public MQ2Type
@@ -85,7 +85,7 @@ void FollowCommandHandler(SPAWNINFO* pChar, char* szLine) {
 		WriteChatf("[MQActorFollow] Usage:");
 		WriteChatf("    /actfollow [character]");
 		WriteChatf("    /actfollow [on|off|pause|resume]");
-		WriteChatf("    /actfollow [ui] -- Toggle ui display");
+		WriteChatf("    /actfollow [ui]");
 		return;
 	}
 
@@ -121,7 +121,7 @@ void FollowCommandHandler(SPAWNINFO* pChar, char* szLine) {
 		}
 	}
 	else if (ci_equals(szArg1, "ui")) {
-		ShowMQActorFollowWindow = !ShowMQActorFollowWindow;
+		ShowMQActorFollowWindow = true;
 	}
 	else if (ci_equals(szArg1, "id")) {
 		auto spawnID = GetIntFromString(GetArg(szArg1, szLine, 2), 0);
@@ -216,6 +216,8 @@ PLUGIN_API void OnUpdateImGui()
 {
 	if (GetGameState() == GAMESTATE_INGAME)
 	{
-		RenderUI();
+		if (ShowMQActorFollowWindow) {
+			RenderUI(&ShowMQActorFollowWindow);
+		}
 	}
 }

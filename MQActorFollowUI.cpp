@@ -200,8 +200,8 @@ void PerformUpdateTab(TabPage page)
 	}
 }
 
-void RenderUI() {
-	if (ImGui::Begin("MQActorFollow", &ShowMQActorFollowWindow, 0))
+void RenderUI(bool* p_open) {
+	if (ImGui::Begin("MQActorFollow", p_open, 0))
 	{
 		if (ImGui::BeginTabBar("##main", ImGuiTabBarFlags_NoCloseWithMiddleMouseButton | ImGuiTabBarFlags_FittingPolicyScroll))
 		{

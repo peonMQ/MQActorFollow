@@ -16,9 +16,7 @@ enum class TabPage {
 	Max
 };
 
-static bool ShowMQActorFollowWindow = true;
-
-void RenderUI();
+void RenderUI(bool* p_open);
 
 template <typename T>
 std::vector<std::shared_ptr<T>> queueToVector(const std::queue<std::shared_ptr<T>>& q) {
