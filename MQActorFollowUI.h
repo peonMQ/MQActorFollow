@@ -6,6 +6,7 @@
 #include "imgui/ImGuiUtils.h"
 
 #include "PluginSettings.h"
+#include "Subscription.h"
 #include "ActorFollowee.pb.h"
 
 enum class TabPage {
@@ -17,4 +18,17 @@ enum class TabPage {
 
 static bool ShowMQActorFollowWindow = true;
 
-void RenderUI(const std::vector<std::shared_ptr<postoffice::Address>>& subscribers, const std::vector<std::shared_ptr<proto::actorfollowee::Position>>& waypoints);
+void RenderUI();
+
+template <typename T>
+std::vector<std::shared_ptr<T>> queueToVector(const std::queue<std::shared_ptr<T>>& q) {
+	std::vector<std::shared_ptr<T>> result;
+	std::queue<std::shared_ptr<T>> copy = q;  // copy the queue
+
+	while (!copy.empty()) {
+		result.push_back(copy.front());
+		copy.pop();
+	}
+
+	return result;
+}

@@ -29,16 +29,3 @@
 #endif
 
 #pragma comment(lib, "login")
-
-template <typename T>
-std::vector<std::shared_ptr<T>> queueToVector(const std::queue<std::shared_ptr<T>>& q) {
-	std::vector<std::shared_ptr<T>> result;
-	std::queue<std::shared_ptr<T>> copy = q;  // copy the queue
-
-	while (!copy.empty()) {
-		result.push_back(copy.front());
-		copy.pop();
-	}
-
-	return result;
-}

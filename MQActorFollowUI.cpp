@@ -184,7 +184,7 @@ void DrawSubscribersUI(const std::vector<std::shared_ptr<postoffice::Address>>& 
 	}
 }
 
-void PerformUpdateTab(TabPage page, const std::vector<std::shared_ptr<postoffice::Address>>& subscribers, const std::vector<std::shared_ptr<proto::actorfollowee::Position>>& waypoints)
+void PerformUpdateTab(TabPage page)
 {
 	if (page == TabPage::Settings)
 	{
@@ -192,15 +192,15 @@ void PerformUpdateTab(TabPage page, const std::vector<std::shared_ptr<postoffice
 	}
 	else if (page == TabPage::Waypoints)
 	{
-		DrawWaypointsUI(waypoints);
+		DrawWaypointsUI(queueToVector(actorfollow::Positions));
 	}
 	else if (page == TabPage::Subscribers)
 	{
-		DrawSubscribersUI(subscribers);
+		DrawSubscribersUI(actorfollow::Subscribers);
 	}
 }
 
-void RenderUI(const std::vector<std::shared_ptr<postoffice::Address>>& subscribers, const std::vector<std::shared_ptr<proto::actorfollowee::Position>>& waypoints) {
+void RenderUI() {
 	if (ImGui::Begin("MQActorFollow", &ShowMQActorFollowWindow, 0))
 	{
 		if (ImGui::BeginTabBar("##main", ImGuiTabBarFlags_NoCloseWithMiddleMouseButton | ImGuiTabBarFlags_FittingPolicyScroll))
@@ -215,7 +215,7 @@ void RenderUI(const std::vector<std::shared_ptr<postoffice::Address>>& subscribe
 
 					ImGui::Separator();
 
-					PerformUpdateTab(selectedTab, subscribers, waypoints);
+					PerformUpdateTab(selectedTab);
 
 					ImGui::EndTabItem();
 				}

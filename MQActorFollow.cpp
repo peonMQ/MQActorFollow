@@ -216,6 +216,6 @@ PLUGIN_API void OnUpdateImGui()
 {
 	if (GetGameState() == GAMESTATE_INGAME)
 	{
-		RenderUI(actorfollow::Subscribers, queueToVector(actorfollow::Positions));
+		RenderUI();
 	}
 }
