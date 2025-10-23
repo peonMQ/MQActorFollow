@@ -75,9 +75,13 @@
   <ItemGroup>
     <ClCompile Include="ActorFollowee.pb.cc" />
     <ClCompile Include="MQActorFollow.cpp" />
+    <ClCompile Include="MQActorFollowUI.cpp" />
+    <ClCompile Include="PluginSettings.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MQActorFollow.h" />
+    <ClInclude Include="MQActorFollowUI.h" />
+    <ClInclude Include="PluginSettings.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>

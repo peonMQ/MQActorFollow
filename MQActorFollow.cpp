@@ -11,7 +11,7 @@
 using namespace mq::proto::actorfollowee;
 
 PreSetup("MQActorFollow");
-PLUGIN_VERSION(0.1);
+PLUGIN_VERSION(0.2);
 
 enum class FollowState {
 	OFF = 0,
@@ -26,8 +26,7 @@ enum class DoorState {
 	Closing = 3
 };
 
-constexpr int MIN_DISTANCE_BETWEEN_POINTS = 10;
-constexpr int WARP_ALERT_DISTANCE = 50;
+static bool ShowMQActorFollowWindow = true;
 const std::chrono::milliseconds UPDATE_TICK_MILLISECONDS = std::chrono::milliseconds(250);
 FollowState FollowingState = FollowState::OFF;
 
@@ -61,7 +60,7 @@ public:
 		switch ((Members)(pMember->ID))
 		{
 		case MQActorFollowType::IsActive:
-			Dest.DWord = (gbInZone && GetCharInfo() && GetCharInfo()->pSpawn);
+			Dest.DWord = (gbInZone && pLocalPC && pLocalPC->pSpawn);
 			Dest.Type = mq::datatypes::pBoolType;
 			return true;
 		case MQActorFollowType::Status:
@@ -102,30 +101,33 @@ void ReceivedMessageHandler(const std::shared_ptr<postoffice::Message>& message)
 		return;
 	}
 
-	mq::proto::actorfollowee::Message advPathMessage;
-	advPathMessage.ParseFromString(*message->Payload);
-	switch (advPathMessage.id())
+	mq::proto::actorfollowee::Message actorFollowMessage;
+	actorFollowMessage.ParseFromString(*message->Payload);
+	switch (actorFollowMessage.id())
 	{
 	case mq::proto::actorfollowee::MessageId::Subscribe:
 		if (message->Sender) {
-			if (!any_of(Subscribers.begin(), Subscribers.end(), [message](const auto& subscriber) { return subscriber->Character == message->Sender->Character; })) {
+			if (!any_of(Subscribers.begin(), Subscribers.end(), [message](const std::shared_ptr<postoffice::Address> subscriber) { return subscriber->Character.value() == message->Sender->Character.value(); })) {
 				Subscribers.push_back(std::make_shared<postoffice::Address>(message->Sender.value()));
+				proto::actorfollowee::Message reply;
+				reply.set_id(mq::proto::actorfollowee::MessageId::Subscribe);
+				DropBox.PostReply(message, reply);
 			}
 		}
 		break;
 	case mq::proto::actorfollowee::MessageId::UnSubscribe:
-		Subscribers.erase(std::remove_if(Subscribers.begin(), Subscribers.end(), [message](const auto& subscriber)
+		Subscribers.erase(std::remove_if(Subscribers.begin(), Subscribers.end(), [message](const std::shared_ptr<postoffice::Address> subscriber)
 			{
 				return subscriber->Character == message->Sender->Character;
 			}), Subscribers.end());
 		break;
 	case mq::proto::actorfollowee::MessageId::PositionUpdate:
-		if (!(GetCharInfo()->pSpawn && GetPcProfile())) {
+		if (!(pLocalPC->pSpawn && GetPcProfile())) {
 			return;
 		}
 
-		auto newposition = advPathMessage.position();
-		if (GetCharInfo()->pSpawn->Zone != newposition.zoneid()) {
+		auto newposition = actorFollowMessage.position();
+		if (pLocalPC->pSpawn->Zone != newposition.zoneid()) {
 			return;
 		}
 
@@ -133,8 +135,10 @@ void ReceivedMessageHandler(const std::shared_ptr<postoffice::Message>& message)
 			Positions.push(std::make_shared<mq::proto::actorfollowee::Position>(newposition));
 		}
 		else {
+			auto& settings = actorfollow::GetSettings();
 			auto previousposition = Positions.back();
-			if (GetDistance3D(previousposition->x(), previousposition->y(), previousposition->z(), newposition.x(), newposition.y(), newposition.z()) > MIN_DISTANCE_BETWEEN_POINTS) {
+			auto distanceToPreviousPoint = GetDistance3D(previousposition->x(), previousposition->y(), previousposition->z(), newposition.x(), newposition.y(), newposition.z());
+			if (distanceToPreviousPoint > 0 && distanceToPreviousPoint > settings.waypoint_min_distance) {
 				Positions.push(std::make_shared<mq::proto::actorfollowee::Position>(newposition));
 			}
 		}
@@ -142,7 +146,14 @@ void ReceivedMessageHandler(const std::shared_ptr<postoffice::Message>& message)
 	}
 }
 
-static void Post(postoffice::Address address, mq::proto::actorfollowee::MessageId messageId, const std::optional<proto::actorfollowee::Position>& data = std::nullopt)
+static void SetSubscription(std::string reciever) {
+	WriteChatf("[MQActorFollow] Following \ay%s\ax.", reciever.c_str());
+	subscription.Server = GetServerShortName();
+	subscription.Character = reciever;
+	FollowingState = FollowState::ON;
+}
+
+static void Post(postoffice::Address address, mq::proto::actorfollowee::MessageId messageId, const std::optional<proto::actorfollowee::Position>& data = std::nullopt, const std::function<void(int, const std::shared_ptr<postoffice::Message>&)>& callback)
 {
 	proto::actorfollowee::Message message;
 	message.set_id(messageId);
@@ -150,19 +161,12 @@ static void Post(postoffice::Address address, mq::proto::actorfollowee::MessageI
 		*message.mutable_position() = *data;
 	}
 
-	DropBox.Post(address, message);
-}
-
-static void SetSubscription(std::string reciever) {
-	subscription.Server = GetServerShortName();
-	subscription.Character = reciever;
+	DropBox.Post(address, message, callback);
 }
 
 void SendPositionUpdate(PcClient* pcClient)
 {
-	if (Subscribers.empty() || !pcClient) {
-		return;
-	}
+	if (!pcClient || Subscribers.empty()) return;
 
 	if (auto pSpawn = pcClient->pSpawn) {
 		proto::actorfollowee::Position newposition;
@@ -174,9 +178,23 @@ void SendPositionUpdate(PcClient* pcClient)
 		newposition.set_z(pSpawn->Z);
 		newposition.set_heading(pSpawn->Heading);
 
-		for (auto& subscriber : Subscribers) // access by reference to avoid copying
-		{
-			Post(*subscriber, mq::proto::actorfollowee::MessageId::PositionUpdate, newposition);
+		// We’ll copy the name once for safe capture in the lambda
+		for (std::shared_ptr<postoffice::Address> subscriber : Subscribers) {
+			// capture subscriber by value (safe if lambda runs async)
+			auto subscriberPtr = subscriber;
+			Post(*subscriberPtr,
+				mq::proto::actorfollowee::MessageId::PositionUpdate,
+				newposition,
+				[subscriberPtr](int code, const std::shared_ptr<postoffice::Message>& reply) {
+					if (code < 0) {
+						WriteChatf("[MQActorFollow] Failed sending position update to \ay%s\ax>, removing subscriber.", subscriberPtr->Character.value().c_str());
+						// Remove the subscriber whose Character matches nameCopy
+						Subscribers.erase(std::remove_if(Subscribers.begin(), Subscribers.end(),
+							[subscriberPtr](const std::shared_ptr<postoffice::Address> sub) {
+								return sub->Character.value() == subscriberPtr->Character.value();
+							}), Subscribers.end());
+					}
+				});
 		}
 	}
 }
@@ -256,14 +274,34 @@ void TryJump(PcClient* pcClient) {
 	}
 }
 
-void StartFollowing(PlayerClient* pSpawn) {
-	WriteChatf("[MQActorFollow] Following \ay%s\ax.", pSpawn->Name);
-	SetSubscription(pSpawn->Name);
-	Post(subscription, proto::actorfollowee::MessageId::Subscribe);
-	FollowingState = FollowState::ON;
+void TrySubscribeFollowing(PlayerClient* pSpawn) {
+	postoffice::Address address;
+	address.Server = GetServerShortName();
+	address.Character = pSpawn->Name;
+	Post(address, proto::actorfollowee::MessageId::Subscribe, std::nullopt, [](int code, const std::shared_ptr<postoffice::Message>& reply) {
+		if (GetGameState() != GAMESTATE_INGAME) {
+			return;
+		}
+
+		if (code < 0) {
+			return;
+		}
+
+		mq::proto::actorfollowee::Message actorFollowMessage;
+		actorFollowMessage.ParseFromString(*reply->Payload);
+		switch (actorFollowMessage.id())
+		{
+		case mq::proto::actorfollowee::MessageId::Subscribe:
+			if (reply->Sender && reply->Sender->Character.has_value()) {
+				SetSubscription(reply->Sender->Character.value());
+			}
+			break;
+		}
+		});
 }
 
 void EndFollowing() {
+	WriteChatf("[MQActorFollow] EndFollowing.");
 	if (subscription.Character) {
 		StopMoving();
 		FollowingState = FollowState::OFF;
@@ -272,6 +310,19 @@ void EndFollowing() {
 		WriteChatf("[MQActorFollow] Stopped following \ay%s\ax.", subscription.Character.value().c_str());
 		subscription.Server = std::nullopt;
 		subscription.Character = std::nullopt;
+	}
+}
+
+void InterruptFollowing()
+{
+	auto& settings = actorfollow::GetSettings();
+	if (settings.autobreak) 
+	{
+		EndFollowing();
+	}
+	else if (settings.autopause) 
+	{
+		FollowingState = FollowState::PAUSED;
 	}
 }
 
@@ -293,7 +344,7 @@ void FollowCommandHandler(SPAWNINFO* pChar, char* szLine) {
 			return;
 		}
 		else if (pTarget) {
-			StartFollowing(pTarget);
+			TrySubscribeFollowing(pTarget);
 		}
 		else {
 			WriteChatf("[MQActorFollow] No target specified.");
@@ -323,7 +374,7 @@ void FollowCommandHandler(SPAWNINFO* pChar, char* szLine) {
 				return;
 			}
 
-			StartFollowing(pSpawn);
+			TrySubscribeFollowing(pSpawn);
 		}
 		else {
 			WriteChatf("[MQActorFollow] SpawnID not found \aw%s\ax.", spawnID);
@@ -337,7 +388,7 @@ void FollowCommandHandler(SPAWNINFO* pChar, char* szLine) {
 				return;
 			}
 
-			StartFollowing(pSpawn);
+			TrySubscribeFollowing(pSpawn);
 		}
 		else {
 			WriteChatf("[MQActorFollow] Character not found \aw%s\ax.", szArg1);
@@ -381,6 +432,10 @@ void LookAt(PcClient* pChar, CVector3 position) {
 
 void AttemptToOpenDoor()
 {
+	auto& settings = actorfollow::GetSettings();
+	if (!settings.open_doors)
+		return;
+
 	static std::chrono::steady_clock::time_point OpenDoorTimer = std::chrono::steady_clock::now();
 
 	// don't execute if we've got an item on the cursor.
@@ -397,25 +452,28 @@ void AttemptToOpenDoor()
 	auto pSwitch = FindSwitchByName();
 	if (pSwitch && GetDistance(pSwitch->X, pSwitch->Y) < 25 && (pSwitch->State == (BYTE)DoorState::Closed || pSwitch->State == (BYTE)DoorState::Closing))
 	{
-		pSwitch->UseSwitch(GetCharInfo()->pSpawn->SpawnID, 0xFFFFFFFF, 0, nullptr);
+		pSwitch->UseSwitch(pLocalPC->pSpawn->SpawnID, 0xFFFFFFFF, 0, nullptr);
 	}
 }
 
 
-bool IsStuck(PcClient* pcClient) {
-	static std::chrono::steady_clock::time_point StuckTimer = std::chrono::steady_clock::now();
+bool IsStuck(PcClient* pcClient) 
+{
+	auto& settings = actorfollow::GetSettings();
+	if (!settings.attempt_unstuck)
+		return false;
+
+	static std::chrono::steady_clock::time_point s_stuck_timer = std::chrono::steady_clock::now();
 	static float previousX = 0;
 	static float previousY = 0;
 
 	auto now = std::chrono::steady_clock::now();
-	if (now > StuckTimer) {
+	if (now > s_stuck_timer) {
 		return false;
 	}
 
 	auto playerClient = pcClient->pSpawn;
 	auto isStuck = false;
-	// check every 100 ms
-	StuckTimer = now + std::chrono::milliseconds(100);
 
 	if (playerClient->SpeedMultiplier != -10000
 		&& FindSpeed(playerClient)
@@ -425,7 +483,9 @@ bool IsStuck(PcClient* pcClient) {
 	{
 		isStuck = true;
 	}
-
+	
+	// check every 100 ms
+	s_stuck_timer = now + std::chrono::milliseconds(100);
 	previousX = playerClient->X;
 	previousY = playerClient->Y;
 	return isStuck;
@@ -433,11 +493,35 @@ bool IsStuck(PcClient* pcClient) {
 
 std::shared_ptr<proto::actorfollowee::Position> GetNextDestination()
 {
+	static std::chrono::steady_clock::time_point s_same_position_timer = std::chrono::steady_clock::now();
+	static std::shared_ptr<proto::actorfollowee::Position> position;
+
 	if (Positions.empty()) {
 		return nullptr;
 	}
 
-	return Positions.front();
+	auto newDestination = Positions.front();
+	auto now = std::chrono::steady_clock::now();
+	if (position == newDestination && now > s_same_position_timer) {
+		WriteChatf("[MQActorFollow]::Timed out trying to reach waypoint, removing from queue");
+		Positions.pop();
+		return nullptr;
+	}
+	else if (position != newDestination) {
+		auto& settings = actorfollow::GetSettings();
+		s_same_position_timer = now + std::chrono::milliseconds(settings.waypoint_timeout_seconds * 1000);
+		position = newDestination;
+	}
+
+	return position;
+}
+
+void PopDestination(bool forceStop) 
+{
+	Positions.pop();
+	if (Positions.empty() || forceStop) {
+		StopMoving();
+	}
 }
 
 void TryFollowActor(PcClient* pcClient) {
@@ -446,17 +530,17 @@ void TryFollowActor(PcClient* pcClient) {
 		if (auto pSpawn = pcClient->pSpawn)
 		{
 			if (auto destination = GetNextDestination()) {
+				auto& settings = actorfollow::GetSettings();
 				if (destination->zoneid() == pSpawn->Zone) {
 					auto position = CVector3{ destination->x(), destination->y(), destination->z() };
 					auto distance3d = GetDistance3D(pSpawn->X, pSpawn->Y, pSpawn->Z, position.X, position.Y, position.Z);
-					if (distance3d < 0 || distance3d > WARP_ALERT_DISTANCE) {
-						WriteChatf("[MQActorFollow] Possible warp detected, exiting (\aw%d\ax)...", distance3d);
-						StopMoving();
-						Positions.pop();
+					if (distance3d < 0 || distance3d > settings.warp_alert_distance) {
+						WriteChatf("[MQActorFollow] Possible warp detected, exiting (\aw%.5f\ax)...", distance3d);
+						PopDestination(true);
 						return;
 					}
 
-					if (distance3d > MIN_DISTANCE_BETWEEN_POINTS) {
+					if (distance3d > settings.waypoint_min_distance) {
 						LookAt(pcClient, position);
 						MoveForward(true);
 						AttemptToOpenDoor();
@@ -465,10 +549,7 @@ void TryFollowActor(PcClient* pcClient) {
 						}
 					}
 					else {
-						Positions.pop();
-						if (Positions.empty()) {
-							StopMoving();
-						}
+						PopDestination(false);
 					}
 				}
 			}
@@ -479,6 +560,7 @@ void TryFollowActor(PcClient* pcClient) {
 PLUGIN_API void InitializePlugin()
 {
 	DebugSpewAlways("[MQActorFollow]::Initializing version %.2f", MQ2Version);
+	actorfollow::LoadSettings();
 	Subscribers.clear();
 	std::queue<std::shared_ptr<proto::actorfollowee::Position>>().swap(Positions);
 
@@ -494,6 +576,7 @@ PLUGIN_API void InitializePlugin()
 PLUGIN_API void ShutdownPlugin()
 {
 	DebugSpewAlways("[MQActorFollow]:: Shutting down");
+	EndFollowing();
 	DropBox.Remove();
 	RemoveCommand("/actfollow");
 	RemoveMQ2Data("ActorFollow");
@@ -510,15 +593,15 @@ PLUGIN_API void SetGameState(int gameState)
 
 PLUGIN_API void OnPulse()
 {
-	static std::chrono::steady_clock::time_point PulseTimer = std::chrono::steady_clock::now();
+	static std::chrono::steady_clock::time_point s_pulse_timer = std::chrono::steady_clock::now();
 	if (GetGameState() == GAMESTATE_INGAME) {
-		if (auto pcClient = GetCharInfo()) {
+		if (pLocalPC) {
 			// Run only after timer is up
-			if (std::chrono::steady_clock::now() > PulseTimer) {
-				PulseTimer = std::chrono::steady_clock::now() + UPDATE_TICK_MILLISECONDS;
-				SendPositionUpdate(pcClient);
+			if (std::chrono::steady_clock::now() > s_pulse_timer) {
+				s_pulse_timer = std::chrono::steady_clock::now() + UPDATE_TICK_MILLISECONDS;
+				SendPositionUpdate(pLocalPC);
 			}
-			TryFollowActor(pcClient);
+			TryFollowActor(pLocalPC);
 		}
 	}
 }
@@ -526,9 +609,19 @@ PLUGIN_API void OnPulse()
 PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color)
 {
 	if (!_stricmp(Line, "You have been summoned!") && FollowingState == FollowState::ON) {
-		WriteChatf("[MQActorFollow]:: Summon detected");
-		EndFollowing();
+		WriteChatf("[MQActorFollow]:: Summon detected. Breaking follow.");
+		InterruptFollowing();
 	}
 
 	return false;
+}
+
+PLUGIN_API void OnUpdateImGui()
+{
+	if (GetGameState() == GAMESTATE_INGAME)
+	{
+		if (ShowMQActorFollowWindow) {
+			RenderUI(&ShowMQActorFollowWindow, Subscribers, queueToVector(Positions));
+		}
+	}
 }
