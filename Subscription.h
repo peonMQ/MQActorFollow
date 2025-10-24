@@ -8,9 +8,8 @@ namespace actorfollow {
 
 	void InitializeSubscription();
 	void ClearSubscribers();
-	void EndFollowing();
-	void InterruptFollowing();
-	void SendPositionUpdate(PcClient* pcClient);
-	void TrySubscribeFollowing(PlayerClient* pSpawn);
-	void CleanupSubscription();
+	void UnSubscribe();
+	void SendUpdate(PcClient* pcClient);
+	void Subscribe(PlayerClient* pSpawn);
+	void ShutdownSubscription();
 }

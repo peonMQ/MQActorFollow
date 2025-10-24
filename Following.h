@@ -15,4 +15,5 @@ namespace actorfollow {
 	inline  std::queue<std::shared_ptr<mq::proto::actorfollowee::Position>> Positions;
 
 	void TryFollowActor(PcClient* pcClient);
+	void InterruptFollowing(const std::function<void()>& unsubscribeCallback);
 }

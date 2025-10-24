@@ -63,4 +63,17 @@ namespace actorfollow
 			}
 		}
 	}
+
+	void InterruptFollowing(const std::function<void()>& unsubscribeCallback)
+	{
+		auto& settings = actorfollow::GetSettings();
+		if (settings.autobreak)
+		{
+			unsubscribeCallback();
+		}
+		else if (settings.autopause)
+		{
+			actorfollow::FollowingState = actorfollow::FollowState::PAUSED;
+		}
+	}
 }

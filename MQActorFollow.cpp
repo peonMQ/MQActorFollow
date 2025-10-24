@@ -98,7 +98,7 @@ void FollowCommandHandler(SPAWNINFO* pChar, char* szLine) {
 			return;
 		}
 		else if (pTarget) {
-			actorfollow::TrySubscribeFollowing(pTarget);
+			actorfollow::Subscribe(pTarget);
 		}
 		else {
 			WriteChatf("[MQActorFollow] No target specified.");
@@ -106,7 +106,7 @@ void FollowCommandHandler(SPAWNINFO* pChar, char* szLine) {
 		}
 	}
 	else if (ci_equals(szArg1, "off")) {
-		actorfollow::EndFollowing();
+		actorfollow::UnSubscribe();
 	}
 	else if (ci_equals(szArg1, "pause")) {
 		if (actorfollow::FollowingState == actorfollow::FollowState::ON) {
@@ -131,7 +131,7 @@ void FollowCommandHandler(SPAWNINFO* pChar, char* szLine) {
 				return;
 			}
 
-			actorfollow::TrySubscribeFollowing(pSpawn);
+			actorfollow::Subscribe(pSpawn);
 		}
 		else {
 			WriteChatf("[MQActorFollow] SpawnID not found \aw%s\ax.", spawnID);
@@ -145,7 +145,7 @@ void FollowCommandHandler(SPAWNINFO* pChar, char* szLine) {
 				return;
 			}
 
-			actorfollow::TrySubscribeFollowing(pSpawn);
+			actorfollow::Subscribe(pSpawn);
 		}
 		else {
 			WriteChatf("[MQActorFollow] Character not found \aw%s\ax.", szArg1);
@@ -173,7 +173,7 @@ PLUGIN_API void InitializePlugin()
 PLUGIN_API void ShutdownPlugin()
 {
 	DebugSpewAlways("[MQActorFollow]:: Shutting down");
-	actorfollow::CleanupSubscription();
+	actorfollow::ShutdownSubscription();
 	RemoveCommand("/actfollow");
 	RemoveMQ2Data("ActorFollow");
 	delete pMQActorAdvPathType;
@@ -183,7 +183,7 @@ PLUGIN_API void SetGameState(int gameState)
 {
 	if (gameState != GAMESTATE_INGAME) {
 		actorfollow::ClearSubscribers();
-		actorfollow::EndFollowing();
+		actorfollow::UnSubscribe();
 	}
 }
 
@@ -195,7 +195,7 @@ PLUGIN_API void OnPulse()
 			// Run only after timer is up
 			if (std::chrono::steady_clock::now() > s_pulse_timer) {
 				s_pulse_timer = std::chrono::steady_clock::now() + UPDATE_TICK_MILLISECONDS;
-				actorfollow::SendPositionUpdate(pLocalPC);
+				actorfollow::SendUpdate(pLocalPC);
 			}
 			actorfollow::TryFollowActor(pLocalPC);
 		}
@@ -206,7 +206,7 @@ PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color)
 {
 	if (!_stricmp(Line, "You have been summoned!") && actorfollow::FollowingState == actorfollow::FollowState::ON) {
 		WriteChatf("[MQActorFollow]:: Summon detected. Breaking follow.");
-		actorfollow::InterruptFollowing();
+		actorfollow::InterruptFollowing(actorfollow::UnSubscribe);
 	}
 
 	return false;

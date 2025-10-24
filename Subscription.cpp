@@ -5,14 +5,22 @@ namespace actorfollow {
 	postoffice::DropboxAPI DropBox;
 	postoffice::Address subscription;
 
-	void CleanupSubscription() {
-		Subscribers.clear();
-		EndFollowing();
-		DropBox.Remove();
+	void SetSubscription(std::string reciever) {
+		WriteChatf("[MQActorFollow] Following \ay%s\ax.", reciever.c_str());
+		subscription.Server = GetServerShortName();
+		subscription.Character = reciever;
+		actorfollow::FollowingState = actorfollow::FollowState::ON;
 	}
 
-	void ClearSubscribers() {
-		Subscribers.clear();
+	void Post(postoffice::Address address, mq::proto::actorfollowee::MessageId messageId, const std::optional<proto::actorfollowee::Position>& data = std::nullopt, const std::function<void(int, const std::shared_ptr<postoffice::Message>&)>& callback = nullptr)
+	{
+		proto::actorfollowee::Message message;
+		message.set_id(messageId);
+		if (data) {
+			*message.mutable_position() = *data;
+		}
+
+		DropBox.Post(address, message, callback);
 	}
 
 	void ReceivedMessageHandler(const std::shared_ptr<postoffice::Message>& message)
@@ -70,25 +78,17 @@ namespace actorfollow {
 		DropBox = postoffice::AddActor(ReceivedMessageHandler);
 	}
 
-	void SetSubscription(std::string reciever) {
-		WriteChatf("[MQActorFollow] Following \ay%s\ax.", reciever.c_str());
-		subscription.Server = GetServerShortName();
-		subscription.Character = reciever;
-		actorfollow::FollowingState = actorfollow::FollowState::ON;
+	void ShutdownSubscription() {
+		Subscribers.clear();
+		UnSubscribe();
+		DropBox.Remove();
 	}
 
-	void Post(postoffice::Address address, mq::proto::actorfollowee::MessageId messageId, const std::optional<proto::actorfollowee::Position>& data = std::nullopt, const std::function<void(int, const std::shared_ptr<postoffice::Message>&)>& callback = nullptr)
-	{
-		proto::actorfollowee::Message message;
-		message.set_id(messageId);
-		if (data) {
-			*message.mutable_position() = *data;
-		}
-
-		DropBox.Post(address, message, callback);
+	void ClearSubscribers() {
+		Subscribers.clear();
 	}
 
-	void SendPositionUpdate(PcClient* pcClient)
+	void SendUpdate(PcClient* pcClient)
 	{
 		if (!pcClient || Subscribers.empty()) return;
 
@@ -123,8 +123,7 @@ namespace actorfollow {
 		}
 	}
 
-
-	void TrySubscribeFollowing(PlayerClient* pSpawn) {
+	void Subscribe(PlayerClient* pSpawn) {
 		postoffice::Address address;
 		address.Server = GetServerShortName();
 		address.Character = pSpawn->Name;
@@ -150,7 +149,7 @@ namespace actorfollow {
 			});
 	}
 
-	void EndFollowing() {
+	void UnSubscribe() {
 		WriteChatf("[MQActorFollow] EndFollowing.");
 		if (subscription.Character) {
 			actorfollow::StopMoving();
@@ -160,19 +159,6 @@ namespace actorfollow {
 			WriteChatf("[MQActorFollow] Stopped following \ay%s\ax.", subscription.Character.value().c_str());
 			subscription.Server = std::nullopt;
 			subscription.Character = std::nullopt;
-		}
-	}
-
-	void InterruptFollowing()
-	{
-		auto& settings = actorfollow::GetSettings();
-		if (settings.autobreak)
-		{
-			EndFollowing();
-		}
-		else if (settings.autopause)
-		{
-			actorfollow::FollowingState = actorfollow::FollowState::PAUSED;
 		}
 	}
 }
