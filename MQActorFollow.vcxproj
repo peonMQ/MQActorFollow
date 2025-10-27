@@ -74,11 +74,21 @@
   </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="ActorFollowee.pb.cc" />
+    <ClCompile Include="Following.cpp" />
+    <ClCompile Include="Movement.cpp" />
     <ClCompile Include="MQActorFollow.cpp" />
+    <ClCompile Include="MQActorFollowUI.cpp" />
+    <ClCompile Include="PluginSettings.cpp" />
+    <ClCompile Include="Subscription.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Following.h" />
+    <ClInclude Include="Movement.h" />
     <ClInclude Include="MQActorFollow.h" />
+    <ClInclude Include="MQActorFollowUI.h" />
+    <ClInclude Include="PluginSettings.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="Subscription.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="MQActorFollow.rc" />

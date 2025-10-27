@@ -14,8 +14,10 @@
 
 #pragma once
 
+#include <mq/Plugin.h>
 #include "routing/PostOffice.h"
-#include "ActorFollowee.pb.h"
+#include "MQActorFollowUI.h"
+#include "Subscription.h"
 
 #include <Windows.h>
 #include <wincrypt.h>
@@ -27,12 +29,3 @@
 #endif
 
 #pragma comment(lib, "login")
-
-std::vector<std::shared_ptr<postoffice::Address>> Subscribers;
-std::queue<std::shared_ptr<proto::actorfollowee::Position>> Positions;
-postoffice::DropboxAPI DropBox;
-
-void MoveForward(bool hold);
-void MoveBackwards(bool hold);
-void StrafeLeft(bool hold);
-void StrafeRight(bool hold);
