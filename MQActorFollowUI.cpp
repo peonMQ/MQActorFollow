@@ -1,7 +1,7 @@
-#pragma once
-
-#include <imgui.h>
 #include "MQActorFollowUI.h"
+#include "FollowController.h"
+#include <map>
+#include <tuple>
 
 ImVec4 ColorRed = ImVec4(0.990f, 0.148f, 0.148f, 1.0f);
 ImVec4 ColorGreen = ImVec4(0.0142f, 0.710f, 0.0490f, 1.0f);
@@ -39,9 +39,10 @@ static const ImVec4 GetColor(std::chrono::seconds time) {
 			return colorMap.second;
 		}
 	}
-
 	return ColorOrange;
 }
+
+// -------------------- Settings Tab --------------------
 
 void DrawSettingsUI()
 {
@@ -57,7 +58,7 @@ void DrawSettingsUI()
 	int current = DoNothing;
 	if (settings.autobreak)
 		current = Stop;
-	else  if (settings.autopause)
+	else if (settings.autopause)
 		current = Pause;
 
 	ImGui::BeginDisabled();
@@ -83,42 +84,33 @@ void DrawSettingsUI()
 	if (ImGui::Checkbox("Automatically click nearby doors", &settings.open_doors))
 		changed = true;
 	if (ImGui::IsItemHovered())
-	{
 		ImGui::SetTooltip("Scans for nearby doors to open automatically while navigating.\nTries to avoid clicking teleporters and elevators.");
-	}
 
 	ImGui::NewLine();
 	if (ImGui::Checkbox("Attempt to get unstuck", &settings.attempt_unstuck))
 		changed = true;
 	if (ImGui::IsItemHovered())
-	{
-		ImGui::SetTooltip("Automatically try to get unstuck of movement is impeeded.\nThis will do things like jump and click randomly. Use with caution!");
-	}
+		ImGui::SetTooltip("Automatically try to get unstuck if movement is impeded.\nThis may jump or click randomly. Use with caution!");
 
 	ImGui::NewLine();
 	if (ImGui::SliderInt("Waypoint min distance", &settings.waypoint_min_distance, 0, 50))
 		changed = true;
 	if (ImGui::IsItemHovered())
-	{
-		ImGui::SetTooltip("The minimum required distance between a waypoint the character.");
-	}
+		ImGui::SetTooltip("The minimum required distance between waypoints.");
 
 	ImGui::NewLine();
-	if (ImGui::SliderInt("Waypoint timout", &settings.waypoint_timeout_seconds, 0, 10))
+	if (ImGui::SliderInt("Waypoint timeout", &settings.waypoint_timeout_seconds, 0, 10))
 		changed = true;
 	if (ImGui::IsItemHovered())
-	{
-		ImGui::SetTooltip("The maximum time in seconds a character will use to try and reach a waypoint.\n The the timer is reached, the waypoint is removed from the list as if the character reach the waypoint.");
-	}
+		ImGui::SetTooltip("The maximum time in seconds to reach a waypoint. If timeout is reached, the waypoint is removed.");
 
-	// save the settings
-	//
 	if (changed)
 		actorfollow::SaveSettings();
 
 	ImGui::Columns(1);
 }
 
+// -------------------- Waypoints Tab --------------------
 void DrawWaypointsUI(const std::vector<std::shared_ptr<proto::actorfollowee::Position>>& waypoints)
 {
 	if (ImGui::BeginTable("##Waypoints", 3, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_Hideable))
@@ -126,30 +118,23 @@ void DrawWaypointsUI(const std::vector<std::shared_ptr<proto::actorfollowee::Pos
 		ImGui::TableSetupColumn("Queue#", ImGuiTableColumnFlags_WidthStretch);
 		ImGui::TableSetupColumn("Waypoint", ImGuiTableColumnFlags_WidthStretch);
 		ImGui::TableSetupColumn("Distance", ImGuiTableColumnFlags_WidthStretch);
-		ImGui::TableSetupScrollFreeze(0, 1);
 		ImGui::TableHeadersRow();
 
 		size_t index = 0;
 		for (const auto& waypoint : waypoints) {
 			ImGui::TableNextRow();
-
-			ImGui::TableNextColumn();
-			ImGui::Text("%d", index);
-
-			ImGui::TableNextColumn();
-			ImGui::Text("%.2f, %.2f, %.2f", waypoint->x(), waypoint->y(), waypoint->z());
-
+			ImGui::TableNextColumn(); ImGui::Text("%d", index);
+			ImGui::TableNextColumn(); ImGui::Text("%.2f, %.2f, %.2f", waypoint->x(), waypoint->y(), waypoint->z());
 			ImGui::TableNextColumn();
 			if (pLocalPC && pLocalPC->pSpawn) {
 				auto pSpawn = pLocalPC->pSpawn;
-				auto position = CVector3{ waypoint->x(), waypoint->y(), waypoint->z() };
-				auto distance3d = GetDistance3D(position.X, position.Y, position.Z, pSpawn->X, pSpawn->Y, pSpawn->Z);
-				ImGui::Text("%.2f", distance3d);
+				auto pos = CVector3{ waypoint->x(), waypoint->y(), waypoint->z() };
+				auto distance = GetDistance3D(pos.X, pos.Y, pos.Z, pSpawn->X, pSpawn->Y, pSpawn->Z);
+				ImGui::Text("%.2f", distance);
 			}
 			else {
 				ImGui::Text("N/A");
 			}
-
 			++index;
 		}
 
@@ -157,70 +142,49 @@ void DrawWaypointsUI(const std::vector<std::shared_ptr<proto::actorfollowee::Pos
 	}
 }
 
+// -------------------- Subscribers Tab --------------------
+
 void DrawSubscribersUI(const std::vector<std::shared_ptr<postoffice::Address>>& subscribers)
 {
 	if (ImGui::BeginTable("##Subscribers", 1, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_Hideable))
 	{
 		ImGui::TableSetupColumn("Subscriber", ImGuiTableColumnFlags_WidthStretch);
-		ImGui::TableSetupScrollFreeze(0, 1);
 		ImGui::TableHeadersRow();
 
-		for (const auto& subscriber : subscribers) {
+		for (const auto& sub : subscribers) {
 			ImGui::TableNextRow();
-
 			ImGui::TableNextColumn();
-			if (subscriber->Name.has_value())
-			{
-				ImGui::Text("%s", subscriber->Name->c_str());
-			}
-			else 
-			{
-				ImGui::Text("%s", subscriber->Character->c_str());
-			}
-
+			if (sub->Name.has_value()) ImGui::Text("%s", sub->Name->c_str());
+			else ImGui::Text("%s", sub->Character->c_str());
 		}
 
 		ImGui::EndTable();
 	}
 }
 
+// -------------------- Tab Dispatcher --------------------
+
 void PerformUpdateTab(TabPage page)
 {
-	if (page == TabPage::Settings)
-	{
-		DrawSettingsUI();
-	}
-	else if (page == TabPage::Waypoints)
-	{
-		DrawWaypointsUI(queueToVector(actorfollow::Positions));
-	}
-	else if (page == TabPage::Subscribers)
-	{
-		DrawSubscribersUI(actorfollow::Subscribers);
-	}
+	if (page == TabPage::Settings) DrawSettingsUI();
+	else if (page == TabPage::Waypoints) DrawWaypointsUI(queueToVector(actorfollow::FollowController::Controller().GetPositionsCopy()));
+	else if (page == TabPage::Subscribers) DrawSubscribersUI(actorfollow::Subscribers);
 }
+
+// -------------------- Main UI --------------------
 
 void RenderUI(bool* p_open) {
 	if (ImGui::Begin("MQActorFollow", p_open, 0))
 	{
 		if (ImGui::BeginTabBar("##main", ImGuiTabBarFlags_NoCloseWithMiddleMouseButton | ImGuiTabBarFlags_FittingPolicyScroll))
 		{
-			for (int i = 0; i < static_cast<int>(TabPage::Max); ++i)
-			{
-				bool isActive = m_selectedTab == i;
-				if (ImGui::BeginTabItem(s_tabNames[i]))
-				{
+			for (int i = 0; i < static_cast<int>(TabPage::Max); ++i) {
+				if (ImGui::BeginTabItem(s_tabNames[i])) {
 					m_selectedTab = i;
-					TabPage selectedTab = static_cast<TabPage>(m_selectedTab);
-
-					ImGui::Separator();
-
-					PerformUpdateTab(selectedTab);
-
+					PerformUpdateTab(static_cast<TabPage>(m_selectedTab));
 					ImGui::EndTabItem();
 				}
 			}
-
 			ImGui::EndTabBar();
 		}
 	}

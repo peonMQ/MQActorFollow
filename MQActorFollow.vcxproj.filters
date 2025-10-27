@@ -30,7 +30,7 @@
     <ClCompile Include="Movement.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Following.cpp">
+    <ClCompile Include="FollowController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Subscription.cpp">
@@ -53,7 +53,7 @@
     <ClInclude Include="Movement.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Following.h">
+    <ClInclude Include="FollowController.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Subscription.h">
