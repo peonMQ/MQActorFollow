@@ -3,7 +3,7 @@
 
 namespace actorfollow
 {
-	std::shared_ptr<proto::actorfollowee::Position> GetNextDestination()
+	std::shared_ptr<proto::actorfollowee::Position> GetCurrentDestination()
 	{
 		static std::chrono::steady_clock::time_point s_same_position_timer = std::chrono::steady_clock::now();
 		static std::shared_ptr<proto::actorfollowee::Position> position;
@@ -30,7 +30,10 @@ namespace actorfollow
 
 	void PopDestination(bool forceStop)
 	{
-		Positions.pop();
+		if (!Positions.empty()) {
+			Positions.pop();
+		}
+
 		if (Positions.empty() || forceStop) {
 			actorfollow::StopMoving();
 		}
@@ -41,7 +44,7 @@ namespace actorfollow
 		{
 			if (auto pSpawn = pcClient->pSpawn)
 			{
-				if (auto destination = GetNextDestination()) {
+				if (auto destination = GetCurrentDestination()) {
 					auto& settings = actorfollow::GetSettings();
 					if (destination->zoneid() == pSpawn->Zone) {
 						auto position = CVector3{ destination->x(), destination->y(), destination->z() };
