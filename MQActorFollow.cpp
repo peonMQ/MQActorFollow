@@ -157,10 +157,7 @@ PLUGIN_API void InitializePlugin() {
     actorfollow::ClearSubscribers();
 
     // Reset FollowController state
-    FollowController::Controller().SetState(FollowState::OFF);
-    while (FollowController::Controller().HasDestinations()) {
-        FollowController::Controller().PopDestination(true);
-    }
+	FollowController::Controller().StopFollowing();
 
     actorfollow::InitializeSubscription();
 
@@ -182,8 +179,7 @@ PLUGIN_API void ShutdownPlugin() {
 // Reset following if leaving the game
 PLUGIN_API void SetGameState(int gameState) {
     if (gameState != GAMESTATE_INGAME) {
-        actorfollow::ClearSubscribers();
-        actorfollow::UnSubscribe();
+		actorfollow::ShutdownSubscription();
     }
 }
 
@@ -200,7 +196,7 @@ PLUGIN_API void OnPulse() {
         actorfollow::SendUpdate(pLocalPC);
     }
 
-    FollowController::Controller().TryFollowActor(pLocalPC);
+    FollowController::Controller().TryFollowActor(pLocalPC, actorfollow::UnSubscribe);
 }
 
 // Handle summon messages

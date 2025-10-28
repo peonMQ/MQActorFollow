@@ -142,8 +142,7 @@ namespace actorfollow {
 	}
 
 
-	bool IsStuck(PcClient* pcClient)
-	{
+	bool IsStuck(PcClient* pcClient) {
 		auto& settings = actorfollow::GetSettings();
 		if (!settings.attempt_unstuck)
 			return false;

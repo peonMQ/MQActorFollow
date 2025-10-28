@@ -64,15 +64,14 @@ namespace actorfollow {
 			if (!(pLocalPC->pSpawn && GetPcProfile())) return;
 
 			auto newPosition = actorFollowMessage.position();
-
 			if (pLocalPC->pSpawn->Zone != newPosition.zoneid()) return;
 
 			auto& controller = FollowController::Controller();
+
 			if (!controller.HasDestinations()) {
 				controller.EnqueueDestination(std::make_shared<mq::proto::actorfollowee::Position>(newPosition));
 			}
-			else {
-				auto currentDestination = controller.GetCurrentDestination();
+			else if (auto currentDestination = controller.GetCurrentDestination()) {
 				auto& settings = actorfollow::GetSettings();
 				auto distance = GetDistance3D(
 					currentDestination->x(), currentDestination->y(), currentDestination->z(),
@@ -82,6 +81,10 @@ namespace actorfollow {
 				if (distance > 0 && distance > settings.waypoint_min_distance) {
 					controller.EnqueueDestination(std::make_shared<mq::proto::actorfollowee::Position>(newPosition));
 				}
+			}
+			else {
+				// If current destination is null, safely enqueue the new one
+				controller.EnqueueDestination(std::make_shared<mq::proto::actorfollowee::Position>(newPosition));
 			}
 			break;
 		}
@@ -158,13 +161,8 @@ namespace actorfollow {
 	void UnSubscribe() {
 		WriteChatf("[MQActorFollow] EndFollowing.");
 		if (subscription.Character) {
-			// Pop all remaining destinations
-			while (FollowController::Controller().HasDestinations()) {
-				FollowController::Controller().PopDestination(false);
-			}
-
 			// Set following state to OFF
-			FollowController::Controller().SetState(FollowState::OFF);
+			FollowController::Controller().StopFollowing();
 
 			Post(subscription, proto::actorfollowee::MessageId::UnSubscribe);
 			WriteChatf("[MQActorFollow] Stopped following \ay%s\ax.", subscription.Character.value().c_str());

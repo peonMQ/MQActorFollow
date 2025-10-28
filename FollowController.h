@@ -23,16 +23,17 @@ namespace actorfollow {
 		bool HasDestinations() const;
 		void EnqueueDestination(std::shared_ptr<proto::actorfollowee::Position> pos);
 		std::shared_ptr<proto::actorfollowee::Position> GetCurrentDestination();
-		void PopDestination(bool forceStop);
+		void ClearDestinations();
 
-		void TryFollowActor(PcClient* pcClient);
-		void StopMoving();
+		void TryFollowActor(PcClient* pcClient, const std::function<void()>& unsubscribeCallback);
+		void StopFollowing();
 		void InterruptFollowing(const std::function<void()>& unsubscribeCallback);
 
 		std::queue<std::shared_ptr<proto::actorfollowee::Position>> GetPositionsCopy() const;
 
 	private:
 		FollowController();
+		void PopDestination();
 
 		FollowState state;
 		std::queue<std::shared_ptr<proto::actorfollowee::Position>> positions;

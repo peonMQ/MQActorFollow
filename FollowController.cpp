@@ -1,24 +1,19 @@
 #include "FollowController.h"
 
 namespace actorfollow {
-
-	// Singleton accessor
 	FollowController& FollowController::Controller() {
 		static FollowController instance;
 		return instance;
 	}
 
-	// Constructor
 	FollowController::FollowController()
 		: state(FollowState::OFF), samePositionTimer(std::chrono::steady_clock::now()) {
 		settings = GetSettings();
 	}
 
-	// State access
 	FollowState FollowController::GetState() const { return state; }
 	void FollowController::SetState(FollowState newState) { state = newState; }
 
-	// Waypoint management
 	bool FollowController::HasDestinations() const { return !positions.empty(); }
 	void FollowController::EnqueueDestination(std::shared_ptr<proto::actorfollowee::Position> pos) {
 		positions.push(pos);
@@ -40,13 +35,13 @@ namespace actorfollow {
 		return lastPosition;
 	}
 
-	void FollowController::PopDestination(bool forceStop) {
+	void FollowController::PopDestination() {
 		if (!positions.empty()) positions.pop();
-		if (positions.empty() || forceStop) StopMoving();
+		if (positions.empty()) actorfollow::StopMoving();
 	}
 
 	// Movement
-	void FollowController::TryFollowActor(PcClient* pcClient) {
+	void FollowController::TryFollowActor(PcClient* pcClient, const std::function<void()>& unsubscribeCallback) {
 		if (pcClient && state == FollowState::ON)
 		{
 			if (auto pSpawn = pcClient->pSpawn)
@@ -58,15 +53,16 @@ namespace actorfollow {
 						auto distance3d = GetDistance3D(pSpawn->X, pSpawn->Y, pSpawn->Z, position.X, position.Y, position.Z);
 						if (distance3d < 0 || distance3d > settings.warp_alert_distance) {
 							WriteChatf("[MQActorFollow] Possible warp detected, exiting (\aw%.5f\ax)...", distance3d);
-							PopDestination(true);
+							unsubscribeCallback();
 							return;
 						}
 
 						if (distance3d > settings.waypoint_min_distance) {
+							WriteChatf("[MQActorFollow] TryFollowActor (\aw%.5f\ax)...", distance3d);
 							actorfollow::MoveTowards(pcClient, position);
 						}
 						else {
-							PopDestination(false);
+							PopDestination();
 						}
 					}
 				}
@@ -74,9 +70,14 @@ namespace actorfollow {
 		}
 	}
 
-	void FollowController::StopMoving() {
-		state = FollowState::OFF;
+	void FollowController::ClearDestinations() {
 		while (!positions.empty()) positions.pop();
+	}
+
+	void FollowController::StopFollowing() {
+		state = FollowState::OFF;
+		actorfollow::StopMoving();
+		ClearDestinations();
 	}
 
 	void FollowController::InterruptFollowing(const std::function<void()>& unsubscribeCallback) {
