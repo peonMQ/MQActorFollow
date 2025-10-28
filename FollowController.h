@@ -1,7 +1,6 @@
 #pragma once
 #include <mq/Plugin.h>
-#include "PluginSettings.h"
-#include "Movement.h"
+#include "MovementController.h"
 #include "ActorFollowee.pb.h"
 
 namespace actorfollow {
@@ -36,11 +35,11 @@ namespace actorfollow {
 		FollowController();
 		void PopDestination();
 
+		MovementController& movement = MovementController::Instance();
 		FollowState state;
 		std::queue<std::shared_ptr<proto::actorfollowee::Position>> positions;
 		std::shared_ptr<proto::actorfollowee::Position> lastPosition;
 		std::chrono::steady_clock::time_point samePositionTimer;
-		SettingsData settings;
 	};
 
 } // namespace actorfollow

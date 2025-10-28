@@ -153,7 +153,7 @@ void FollowCommandHandler(SPAWNINFO* pChar, char* szLine) {
 
 PLUGIN_API void InitializePlugin() {
     DebugSpewAlways("[MQActorFollow]::Initializing version %.2f", MQ2Version);
-    actorfollow::LoadSettings();
+	actorfollow::SettingsManager::Instance().Load();
 	actorfollow::SubscriptionController::Instance().Initialize();
 
     AddCommand("/actfollow", FollowCommandHandler);

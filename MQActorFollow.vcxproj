@@ -75,18 +75,18 @@
   <ItemGroup>
     <ClCompile Include="ActorFollowee.pb.cc" />
     <ClCompile Include="FollowController.cpp" />
-    <ClCompile Include="Movement.cpp" />
+    <ClCompile Include="MovementController.cpp" />
     <ClCompile Include="MQActorFollow.cpp" />
     <ClCompile Include="MQActorFollowUI.cpp" />
-    <ClCompile Include="PluginSettings.cpp" />
+    <ClCompile Include="SettingsManager.cpp" />
     <ClCompile Include="SubscriptionController.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FollowController.h" />
-    <ClInclude Include="Movement.h" />
+    <ClInclude Include="MovementController.h" />
     <ClInclude Include="MQActorFollow.h" />
     <ClInclude Include="MQActorFollowUI.h" />
-    <ClInclude Include="PluginSettings.h" />
+    <ClInclude Include="SettingsManager.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="SubscriptionController.h" />
   </ItemGroup>

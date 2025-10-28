@@ -8,7 +8,6 @@ namespace actorfollow {
 
 	FollowController::FollowController()
 		: state(FollowState::OFF), samePositionTimer(std::chrono::steady_clock::now()) {
-		settings = GetSettings();
 	}
 
 	FollowState FollowController::GetState() const { return state; }
@@ -29,6 +28,7 @@ namespace actorfollow {
 			return nullptr;
 		}
 		else if (lastPosition != newDestination) {
+			auto& settings = actorfollow::SettingsManager::Instance().Get();
 			samePositionTimer = now + std::chrono::milliseconds(settings.waypoint_timeout_seconds * 1000);
 			lastPosition = newDestination;
 		}
@@ -37,7 +37,7 @@ namespace actorfollow {
 
 	void FollowController::PopDestination() {
 		if (!positions.empty()) positions.pop();
-		if (positions.empty()) actorfollow::StopMoving();
+		if (positions.empty()) movement.StopMoving();
 	}
 
 	// Movement
@@ -47,7 +47,7 @@ namespace actorfollow {
 			if (auto pSpawn = pcClient->pSpawn)
 			{
 				if (auto destination = GetCurrentDestination()) {
-					auto& settings = actorfollow::GetSettings();
+					auto& settings = actorfollow::SettingsManager::Instance().Get();
 					if (destination->zoneid() == pSpawn->Zone) {
 						auto position = CVector3{ destination->x(), destination->y(), destination->z() };
 						auto distance3d = GetDistance3D(pSpawn->X, pSpawn->Y, pSpawn->Z, position.X, position.Y, position.Z);
@@ -59,7 +59,7 @@ namespace actorfollow {
 
 						if (distance3d > settings.waypoint_min_distance) {
 							DebugSpewAlways("[MQActorFollow] TryFollowActor (\aw%.5f\ax)...", distance3d);
-							actorfollow::MoveTowards(pcClient, position);
+							movement.MoveTowards(pcClient, position);
 						}
 						else {
 							PopDestination();
@@ -76,11 +76,12 @@ namespace actorfollow {
 
 	void FollowController::StopFollowing() {
 		state = FollowState::OFF;
-		actorfollow::StopMoving();
+		movement.StopMoving();
 		ClearDestinations();
 	}
 
 	void FollowController::InterruptFollowing(const std::function<void()>& unsubscribeCallback) {
+		auto& settings = actorfollow::SettingsManager::Instance().Get();
 		if (settings.autobreak) {
 			unsubscribeCallback();
 		}

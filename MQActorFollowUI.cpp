@@ -47,7 +47,7 @@ static const ImVec4 GetColor(std::chrono::seconds time) {
 void DrawSettingsUI()
 {
 	bool changed = false;
-	auto& settings = actorfollow::GetSettings();
+	auto& settings = actorfollow::SettingsManager::Instance().Mutable();
 
 	enum BreakBehavior {
 		DoNothing = 0,
@@ -105,7 +105,7 @@ void DrawSettingsUI()
 		ImGui::SetTooltip("The maximum time in seconds to reach a waypoint. If timeout is reached, the waypoint is removed.");
 
 	if (changed)
-		actorfollow::SaveSettings();
+		actorfollow::SettingsManager::Instance().Save();
 
 	ImGui::Columns(1);
 }

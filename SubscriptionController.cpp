@@ -1,6 +1,4 @@
 #include "SubscriptionController.h"
-#include "PluginSettings.h"
-#include "Movement.h"
 
 namespace actorfollow {
 
@@ -177,7 +175,7 @@ namespace actorfollow {
 			}
 			else if (auto current = controller.GetCurrentDestination())
 			{
-				auto& settings = GetSettings();
+				const auto& settings = actorfollow::SettingsManager::Instance().Get();
 				float dist = GetDistance3D(current->x(), current->y(), current->z(),
 					pos.x(), pos.y(), pos.z());
 				if (dist > settings.waypoint_min_distance)
