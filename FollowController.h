@@ -29,6 +29,7 @@ namespace actorfollow {
 		void StopFollowing();
 		void InterruptFollowing(const std::function<void()>& unsubscribeCallback);
 
+		int WaypointCount();
 		std::queue<std::shared_ptr<proto::actorfollowee::Position>> GetPositionsCopy() const;
 
 	private:

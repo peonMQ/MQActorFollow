@@ -33,7 +33,7 @@
     <ClCompile Include="FollowController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Subscription.cpp">
+    <ClCompile Include="SubscriptionController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -56,7 +56,7 @@
     <ClInclude Include="FollowController.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Subscription.h">
+    <ClInclude Include="SubscriptionController.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

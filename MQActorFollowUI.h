@@ -6,7 +6,7 @@
 #include "imgui/ImGuiUtils.h"
 
 #include "PluginSettings.h"
-#include "Subscription.h"
+#include "SubscriptionController.h"
 #include "ActorFollowee.pb.h"
 
 enum class TabPage {

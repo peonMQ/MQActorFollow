@@ -79,7 +79,7 @@
     <ClCompile Include="MQActorFollow.cpp" />
     <ClCompile Include="MQActorFollowUI.cpp" />
     <ClCompile Include="PluginSettings.cpp" />
-    <ClCompile Include="Subscription.cpp" />
+    <ClCompile Include="SubscriptionController.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FollowController.h" />
@@ -88,7 +88,7 @@
     <ClInclude Include="MQActorFollowUI.h" />
     <ClInclude Include="PluginSettings.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="Subscription.h" />
+    <ClInclude Include="SubscriptionController.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="MQActorFollow.rc" />

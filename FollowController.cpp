@@ -58,7 +58,7 @@ namespace actorfollow {
 						}
 
 						if (distance3d > settings.waypoint_min_distance) {
-							WriteChatf("[MQActorFollow] TryFollowActor (\aw%.5f\ax)...", distance3d);
+							DebugSpewAlways("[MQActorFollow] TryFollowActor (\aw%.5f\ax)...", distance3d);
 							actorfollow::MoveTowards(pcClient, position);
 						}
 						else {
@@ -87,6 +87,10 @@ namespace actorfollow {
 		else if (settings.autopause) {
 			state = FollowState::PAUSED;
 		}
+	}
+
+	int FollowController::WaypointCount() {
+		return static_cast<int>(positions.size());
 	}
 
 	std::queue<std::shared_ptr<proto::actorfollowee::Position>> FollowController::GetPositionsCopy() const {

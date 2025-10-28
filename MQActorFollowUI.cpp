@@ -168,7 +168,7 @@ void PerformUpdateTab(TabPage page)
 {
 	if (page == TabPage::Settings) DrawSettingsUI();
 	else if (page == TabPage::Waypoints) DrawWaypointsUI(queueToVector(actorfollow::FollowController::Controller().GetPositionsCopy()));
-	else if (page == TabPage::Subscribers) DrawSubscribersUI(actorfollow::Subscribers);
+	else if (page == TabPage::Subscribers) DrawSubscribersUI(actorfollow::SubscriptionController::Instance().GetSubscribers());
 }
 
 // -------------------- Main UI --------------------
