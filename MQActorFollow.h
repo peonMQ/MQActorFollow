@@ -17,7 +17,7 @@
 #include <mq/Plugin.h>
 #include "routing/PostOffice.h"
 #include "MQActorFollowUI.h"
-#include "Subscription.h"
+#include "SubscriptionController.h"
 
 #include <Windows.h>
 #include <wincrypt.h>

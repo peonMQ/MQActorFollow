@@ -24,16 +24,16 @@
     <ClCompile Include="MQActorFollowUI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PluginSettings.cpp">
+    <ClCompile Include="SettingsManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Movement.cpp">
+    <ClCompile Include="MovementController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Following.cpp">
+    <ClCompile Include="FollowController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Subscription.cpp">
+    <ClCompile Include="SubscriptionController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -47,16 +47,16 @@
     <ClInclude Include="MQActorFollowUI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PluginSettings.h">
+    <ClInclude Include="SettingsManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Movement.h">
+    <ClInclude Include="MovementController.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Following.h">
+    <ClInclude Include="FollowController.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Subscription.h">
+    <ClInclude Include="SubscriptionController.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
