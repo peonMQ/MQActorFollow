@@ -22,7 +22,7 @@ namespace actorfollow {
 
 	void SubscriptionController::Shutdown()
 	{
-		ClearSubscribers();
+		CancelSubscriptions();
 		Unsubscribe();
 		dropbox.Remove();
 	}
@@ -53,6 +53,18 @@ namespace actorfollow {
 	void SubscriptionController::ClearSubscribers()
 	{
 		subscribers.clear();
+	}
+
+	void SubscriptionController::CancelSubscriptions()
+	{
+		if (HasSubscriptions()) {
+			for (auto& sub : subscribers)
+			{
+				auto subPtr = sub;
+				Post(*subPtr, mq::proto::actorfollowee::MessageId::CancelSubscription);
+			}
+			ClearSubscribers();
+		}
 	}
 
 	void SubscriptionController::Unsubscribe()
@@ -154,6 +166,13 @@ namespace actorfollow {
 			break;
 
 		case mq::proto::actorfollowee::MessageId::UnSubscribe:
+			subscribers.erase(
+				std::remove_if(subscribers.begin(), subscribers.end(),
+					[&](const auto& s) { return s->Character == message->Sender->Character; }),
+				subscribers.end());
+			break;
+
+		case mq::proto::actorfollowee::MessageId::CancelSubscription:
 			subscribers.erase(
 				std::remove_if(subscribers.begin(), subscribers.end(),
 					[&](const auto& s) { return s->Character == message->Sender->Character; }),

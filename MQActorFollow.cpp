@@ -8,7 +8,6 @@ PreSetup("MQActorFollow");
 PLUGIN_VERSION(0.2);
 
 const std::chrono::milliseconds UPDATE_TICK_MILLISECONDS = std::chrono::milliseconds(250);
-static bool ShowMQActorFollowWindow = true;
 
 class MQActorFollowType* pMQActorAdvPathType = nullptr;
 
@@ -122,7 +121,12 @@ void FollowCommandHandler(SPAWNINFO* pChar, char* szLine) {
         }
     }
     else if (ci_equals(szArg1, "ui")) {
-        ShowMQActorFollowWindow = true;
+		if (MQActorFollowUI::Instance().IsVisible()) {
+			MQActorFollowUI::Instance().Hide();
+		}
+		else {
+			MQActorFollowUI::Instance().Show();
+		}
     }
     else if (ci_equals(szArg1, "id")) {
         auto spawnID = GetIntFromString(GetArg(szArg1, szLine, 2), 0);
@@ -174,7 +178,8 @@ PLUGIN_API void ShutdownPlugin() {
 // Reset following if leaving the game
 PLUGIN_API void SetGameState(int gameState) {
     if (gameState != GAMESTATE_INGAME) {
-        actorfollow::SubscriptionController::Instance().Shutdown();
+		actorfollow::SubscriptionController::Instance().CancelSubscriptions();
+		actorfollow::SubscriptionController::Instance().Unsubscribe();
     }
 }
 
@@ -196,8 +201,7 @@ PLUGIN_API void OnPulse() {
 
 // Handle summon messages
 PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color) {
-    if (!_stricmp(Line, "You have been summoned!") &&
-        FollowController::Controller().GetState() == FollowState::ON)
+    if (!_stricmp(Line, "You have been summoned!") && FollowController::Controller().GetState() == FollowState::ON)
     {
         WriteChatf("[MQActorFollow]:: Summon detected. Breaking follow.");
         FollowController::Controller().InterruptFollowing([]() { SubscriptionController::Instance().Unsubscribe(); });
@@ -206,8 +210,8 @@ PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color) {
 }
 
 // ImGui UI render
-PLUGIN_API void OnUpdateImGui() {
-    if (GetGameState() == GAMESTATE_INGAME && ShowMQActorFollowWindow) {
-        RenderUI(&ShowMQActorFollowWindow);
+PLUGIN_API void OnUpdateImGui() {	
+    if (GetGameState() == GAMESTATE_INGAME) {
+        MQActorFollowUI::Instance().RenderUI();
     }
 }

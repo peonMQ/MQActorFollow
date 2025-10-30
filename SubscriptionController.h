@@ -17,6 +17,7 @@ namespace actorfollow {
 		void Unsubscribe();
 		void SendUpdate(PcClient* pcClient);
 		bool HasSubscriptions();
+		void CancelSubscriptions();
 
 		const std::vector<std::shared_ptr<postoffice::Address>>& GetSubscribers() const { return subscribers; }
 

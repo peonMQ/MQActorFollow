@@ -6,7 +6,8 @@ enum MessageId {
 	NoOp = 0;
 	Subscribe = 1;
 	UnSubscribe = 2;
-	PositionUpdate = 3;
+	CancelSubscription = 3;
+	PositionUpdate = 4;
 }
 
 message Position {

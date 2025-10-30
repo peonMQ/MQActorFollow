@@ -12,6 +12,7 @@ namespace actorfollow {
 		int waypoint_min_distance = 10;
 		int warp_alert_distance = 50;
 		int waypoint_timeout_seconds = 5;
+		bool show_ui_on_startup = false;
 	};
 
 	class SettingsManager
