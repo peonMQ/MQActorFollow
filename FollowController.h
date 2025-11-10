@@ -1,7 +1,7 @@
 #pragma once
 #include <mq/Plugin.h>
 #include "MovementController.h"
-#include "ActorFollowee.pb.h"
+#include "ActorFollow.pb.h"
 
 namespace actorfollow {
 
@@ -20,8 +20,8 @@ namespace actorfollow {
 		void SetState(FollowState newState);
 
 		bool HasDestinations() const;
-		void EnqueueDestination(std::shared_ptr<proto::actorfollowee::Position> pos);
-		std::shared_ptr<proto::actorfollowee::Position> GetCurrentDestination();
+		void EnqueueDestination(std::shared_ptr<proto::actorfollow::Position> pos);
+		std::shared_ptr<proto::actorfollow::Position> GetCurrentDestination();
 		void ClearDestinations();
 
 		void TryFollowActor(PcClient* pcClient, const std::function<void()>& unsubscribeCallback);
@@ -29,7 +29,7 @@ namespace actorfollow {
 		void InterruptFollowing(const std::function<void()>& unsubscribeCallback);
 
 		int WaypointCount();
-		std::queue<std::shared_ptr<proto::actorfollowee::Position>> GetPositionsCopy() const;
+		std::queue<std::shared_ptr<proto::actorfollow::Position>> GetPositionsCopy() const;
 
 	private:
 		FollowController();
@@ -37,8 +37,8 @@ namespace actorfollow {
 
 		MovementController& movement = MovementController::Instance();
 		FollowState state;
-		std::queue<std::shared_ptr<proto::actorfollowee::Position>> positions;
-		std::shared_ptr<proto::actorfollowee::Position> lastPosition;
+		std::queue<std::shared_ptr<proto::actorfollow::Position>> positions;
+		std::shared_ptr<proto::actorfollow::Position> lastPosition;
 		std::chrono::steady_clock::time_point samePositionTimer;
 	};
 

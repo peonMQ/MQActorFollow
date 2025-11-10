@@ -1,7 +1,7 @@
 #include <mq/Plugin.h>
 #include "MQActorFollow.h"
 
-using namespace mq::proto::actorfollowee;
+using namespace mq::proto::actorfollow;
 using namespace actorfollow;
 
 PreSetup("MQActorFollow");
@@ -9,7 +9,7 @@ PLUGIN_VERSION(0.2);
 
 const std::chrono::milliseconds UPDATE_TICK_MILLISECONDS = std::chrono::milliseconds(250);
 
-class MQActorFollowType* pMQActorAdvPathType = nullptr;
+class MQActorFollowType* pMQActorFollowType = nullptr;
 
 class MQActorFollowType : public MQ2Type
 {
@@ -74,8 +74,8 @@ public:
     }
 };
 
-bool DataActorFollow(const char* szIndex, MQTypeVar& Ret) {
-    Ret.Type = pMQActorAdvPathType;
+bool DataRemote(const char* szIndex, MQTypeVar& Ret) {
+    Ret.Type = pMQActorFollowType;
     return true;
 }
 
@@ -161,10 +161,8 @@ PLUGIN_API void InitializePlugin() {
 	actorfollow::SubscriptionController::Instance().Initialize();
 
     AddCommand("/actfollow", FollowCommandHandler);
-    pMQActorAdvPathType = new MQActorFollowType;
-    AddMQ2Data("ActorFollow", DataActorFollow);
-
-    WriteChatf("[MQActorFollow] \ayv%.2f\ax", MQ2Version);
+	pMQActorFollowType = new MQActorFollowType;
+    AddMQ2Data("ActorFollow", DataRemote);
 }
 
 PLUGIN_API void ShutdownPlugin() {
@@ -172,7 +170,7 @@ PLUGIN_API void ShutdownPlugin() {
     actorfollow::SubscriptionController::Instance().Shutdown();
     RemoveCommand("/actfollow");
     RemoveMQ2Data("ActorFollow");
-    delete pMQActorAdvPathType;
+    delete pMQActorFollowType;
 }
 
 // Reset following if leaving the game

@@ -14,11 +14,11 @@ namespace actorfollow {
 	void FollowController::SetState(FollowState newState) { state = newState; }
 
 	bool FollowController::HasDestinations() const { return !positions.empty(); }
-	void FollowController::EnqueueDestination(std::shared_ptr<proto::actorfollowee::Position> pos) {
+	void FollowController::EnqueueDestination(std::shared_ptr<proto::actorfollow::Position> pos) {
 		positions.push(pos);
 	}
 
-	std::shared_ptr<proto::actorfollowee::Position> FollowController::GetCurrentDestination() {
+	std::shared_ptr<proto::actorfollow::Position> FollowController::GetCurrentDestination() {
 		if (positions.empty()) return nullptr;
 		auto newDestination = positions.front();
 		auto now = std::chrono::steady_clock::now();
@@ -94,7 +94,7 @@ namespace actorfollow {
 		return static_cast<int>(positions.size());
 	}
 
-	std::queue<std::shared_ptr<proto::actorfollowee::Position>> FollowController::GetPositionsCopy() const {
+	std::queue<std::shared_ptr<proto::actorfollow::Position>> FollowController::GetPositionsCopy() const {
 		return positions;
 	}
 

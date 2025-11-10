@@ -7,7 +7,7 @@
 
 #include "SettingsManager.h"
 #include "SubscriptionController.h"
-#include "ActorFollowee.pb.h"
+#include "ActorFollow.pb.h"
 
 enum class TabPage
 {
@@ -63,7 +63,7 @@ private:
 	static ImVec4 GetColor(std::chrono::seconds time);
 
 	void DrawSettingsUI();
-	void DrawWaypointsUI(const std::vector<std::shared_ptr<proto::actorfollowee::Position>>& waypoints);
+	void DrawWaypointsUI(const std::vector<std::shared_ptr<proto::actorfollow::Position>>& waypoints);
 	void DrawSubscribersUI(const std::vector<std::shared_ptr<postoffice::Address>>& subscribers);
 	void PerformUpdateTab(TabPage page);
 

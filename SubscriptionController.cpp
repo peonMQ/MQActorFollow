@@ -29,11 +29,11 @@ namespace actorfollow {
 
 	void SubscriptionController::Post(
 		postoffice::Address address,
-		mq::proto::actorfollowee::MessageId messageId,
-		const std::optional<proto::actorfollowee::Position>& data,
+		mq::proto::actorfollow::MessageId messageId,
+		const std::optional<proto::actorfollow::Position>& data,
 		const std::function<void(int, const std::shared_ptr<postoffice::Message>&)>& callback)
 	{
-		proto::actorfollowee::Message message;
+		proto::actorfollow::Message message;
 		message.set_id(messageId);
 		if (data)
 			*message.mutable_position() = *data;
@@ -61,7 +61,7 @@ namespace actorfollow {
 			for (auto& sub : subscribers)
 			{
 				auto subPtr = sub;
-				Post(*subPtr, mq::proto::actorfollowee::MessageId::CancelSubscription);
+				Post(*subPtr, mq::proto::actorfollow::MessageId::CancelSubscription);
 			}
 			ClearSubscribers();
 		}
@@ -73,7 +73,7 @@ namespace actorfollow {
 			return;
 
 		FollowController::Controller().StopFollowing();
-		Post(subscription, proto::actorfollowee::MessageId::UnSubscribe);
+		Post(subscription, proto::actorfollow::MessageId::UnSubscribe);
 		WriteChatf("[MQActorFollow] Stopped following \ay%s\ax.", subscription.Character.value().c_str());
 
 		subscription.Server = std::nullopt;
@@ -86,15 +86,15 @@ namespace actorfollow {
 		address.Server = GetServerShortName();
 		address.Character = pSpawn->Name;
 
-		Post(address, proto::actorfollowee::MessageId::Subscribe, std::nullopt,
+		Post(address, proto::actorfollow::MessageId::Subscribe, std::nullopt,
 			[this](int code, const std::shared_ptr<postoffice::Message>& reply) {
 				if (GetGameState() != GAMESTATE_INGAME || code < 0)
 					return;
 
-				mq::proto::actorfollowee::Message msg;
+				mq::proto::actorfollow::Message msg;
 				msg.ParseFromString(*reply->Payload);
 
-				if (msg.id() == mq::proto::actorfollowee::MessageId::Subscribe &&
+				if (msg.id() == mq::proto::actorfollow::MessageId::Subscribe &&
 					reply->Sender && reply->Sender->Character.has_value())
 				{
 					SetSubscription(reply->Sender->Character.value());
@@ -107,7 +107,7 @@ namespace actorfollow {
 		if (!pcClient || !pcClient->pSpawn || subscribers.empty())
 			return;
 
-		proto::actorfollowee::Position pos;
+		proto::actorfollow::Position pos;
 		pos.set_spawnid(pcClient->pSpawn->SpawnID);
 		pos.set_name(pcClient->pSpawn->Name);
 		pos.set_zoneid(pcClient->pSpawn->Zone);
@@ -119,7 +119,7 @@ namespace actorfollow {
 		for (auto& sub : subscribers)
 		{
 			auto subPtr = sub;
-			Post(*subPtr, mq::proto::actorfollowee::MessageId::PositionUpdate, pos,
+			Post(*subPtr, mq::proto::actorfollow::MessageId::PositionUpdate, pos,
 				[this, subPtr](int code, const std::shared_ptr<postoffice::Message>&) {
 					if (code < 0)
 					{
@@ -144,12 +144,12 @@ namespace actorfollow {
 		if (GetGameState() != GAMESTATE_INGAME)
 			return;
 
-		mq::proto::actorfollowee::Message msg;
+		mq::proto::actorfollow::Message msg;
 		msg.ParseFromString(*message->Payload);
 
 		switch (msg.id())
 		{
-		case mq::proto::actorfollowee::MessageId::Subscribe:
+		case mq::proto::actorfollow::MessageId::Subscribe:
 			if (message->Sender)
 			{
 				bool exists = std::any_of(subscribers.begin(), subscribers.end(),
@@ -158,28 +158,28 @@ namespace actorfollow {
 				if (!exists)
 				{
 					subscribers.push_back(std::make_shared<postoffice::Address>(message->Sender.value()));
-					proto::actorfollowee::Message reply;
-					reply.set_id(mq::proto::actorfollowee::MessageId::Subscribe);
+					proto::actorfollow::Message reply;
+					reply.set_id(mq::proto::actorfollow::MessageId::Subscribe);
 					dropbox.PostReply(message, reply);
 				}
 			}
 			break;
 
-		case mq::proto::actorfollowee::MessageId::UnSubscribe:
+		case mq::proto::actorfollow::MessageId::UnSubscribe:
 			subscribers.erase(
 				std::remove_if(subscribers.begin(), subscribers.end(),
 					[&](const auto& s) { return s->Character == message->Sender->Character; }),
 				subscribers.end());
 			break;
 
-		case mq::proto::actorfollowee::MessageId::CancelSubscription:
+		case mq::proto::actorfollow::MessageId::CancelSubscription:
 			subscribers.erase(
 				std::remove_if(subscribers.begin(), subscribers.end(),
 					[&](const auto& s) { return s->Character == message->Sender->Character; }),
 				subscribers.end());
 			break;
 
-		case mq::proto::actorfollowee::MessageId::PositionUpdate: {
+		case mq::proto::actorfollow::MessageId::PositionUpdate: {
 			if (!(pLocalPC->pSpawn && GetPcProfile()))
 				return;
 
@@ -190,7 +190,7 @@ namespace actorfollow {
 			auto& controller = FollowController::Controller();
 			if (!controller.HasDestinations())
 			{
-				controller.EnqueueDestination(std::make_shared<mq::proto::actorfollowee::Position>(pos));
+				controller.EnqueueDestination(std::make_shared<mq::proto::actorfollow::Position>(pos));
 			}
 			else if (auto current = controller.GetCurrentDestination())
 			{
@@ -199,7 +199,7 @@ namespace actorfollow {
 					pos.x(), pos.y(), pos.z());
 				if (dist > settings.waypoint_min_distance)
 				{
-					controller.EnqueueDestination(std::make_shared<mq::proto::actorfollowee::Position>(pos));
+					controller.EnqueueDestination(std::make_shared<mq::proto::actorfollow::Position>(pos));
 				}
 			}
 		} break;

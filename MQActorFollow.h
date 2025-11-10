@@ -21,11 +21,3 @@
 
 #include <Windows.h>
 #include <wincrypt.h>
-
-#ifdef _DEBUG
-#pragma comment(lib, "libprotobufd")
-#else
-#pragma comment(lib, "libprotobuf")
-#endif
-
-#pragma comment(lib, "login")

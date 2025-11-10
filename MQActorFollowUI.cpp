@@ -101,7 +101,7 @@ void MQActorFollowUI::DrawSettingsUI()
 	ImGui::Columns(1);
 }
 
-void MQActorFollowUI::DrawWaypointsUI(const std::vector<std::shared_ptr<proto::actorfollowee::Position>>& waypoints)
+void MQActorFollowUI::DrawWaypointsUI(const std::vector<std::shared_ptr<proto::actorfollow::Position>>& waypoints)
 {
 	if (ImGui::BeginTable("##Waypoints", 3, ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_Hideable))
 	{

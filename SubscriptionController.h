@@ -1,6 +1,6 @@
 #pragma once
 #include <mq/Plugin.h>
-#include "ActorFollowee.pb.h"
+#include "ActorFollow.pb.h"
 #include "FollowController.h"
 
 namespace actorfollow {
@@ -32,8 +32,8 @@ namespace actorfollow {
 		// Core messaging
 		void Post(
 			postoffice::Address address,
-			mq::proto::actorfollowee::MessageId messageId,
-			const std::optional<proto::actorfollowee::Position>& data = std::nullopt,
+			mq::proto::actorfollow::MessageId messageId,
+			const std::optional<proto::actorfollow::Position>& data = std::nullopt,
 			const std::function<void(int, const std::shared_ptr<postoffice::Message>&)>& callback = nullptr
 		);
 

@@ -73,7 +73,7 @@
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
   </PropertyGroup>
   <ItemGroup>
-    <ClCompile Include="ActorFollowee.pb.cc" />
+    <ClCompile Include="ActorFollow.pb.cc" />
     <ClCompile Include="FollowController.cpp" />
     <ClCompile Include="MovementController.cpp" />
     <ClCompile Include="MQActorFollow.cpp" />
@@ -82,6 +82,7 @@
     <ClCompile Include="SubscriptionController.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ActorFollow.pb.h" />
     <ClInclude Include="FollowController.h" />
     <ClInclude Include="MovementController.h" />
     <ClInclude Include="MQActorFollow.h" />
@@ -97,7 +98,7 @@
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
-    <ProtocolBuffer Include="..\MQActorFollow\ActorFollowee.proto" />
+    <ProtocolBuffer Include="ActorFollow.proto" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

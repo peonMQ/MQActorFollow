@@ -1,6 +1,6 @@
 # MQActorFollow
 
-This plugin allows you to follow a player movement more precisely using MQ actors
+This plugin allows you to follow a player movement more precisely using MQ actors. Both the follower and the player being followed must run the plugin.
 
 ## Getting Started
 
@@ -16,10 +16,12 @@ Describe the commands available and how to use them.
 
 ```txt
 ========= Actor Advance Pathing Help =========
-/actfollow JohnDoe
+/actfollow JohnDoe  # follow by pc name
+/actfollow 123      # follow by pc spawn id
 /actfollow pause
 /actfollow resume
 /actfollow off
+/actfollow ui       # toggles ui
 ===============================================
 ```
 
@@ -27,12 +29,12 @@ Describe the commands available and how to use them.
 ### TLO
 
 ```txt
-${ActorAdvPath.IsActive} - Plugin Loaded and ready
-${ActorAdvPath.FollowState} - FollowState, 0 = off, 1 = on
-${ActorAdvPath.Status} - Status 0 = off , 1 = on , 2 = paused
-${ActorAdvPath.WaypointsCount} - Total Number of current waypoints
-${ActorAdvPath.IsFollowing} - BOOL Is following spawn
-${ActorAdvPath.IsPaused} - BOOL Is paused
+${ActorFollow.IsActive} - Plugin Loaded and ready
+${ActorFollow.FollowState} - FollowState, 0 = off, 1 = on
+${ActorFollow.Status} - Status 0 = off , 1 = on , 2 = paused
+${ActorFollow.WaypointsCount} - Total Number of current waypoints
+${ActorFollow.IsFollowing} - BOOL Is following spawn
+${ActorFollow.IsPaused} - BOOL Is paused
 ```
 
 
