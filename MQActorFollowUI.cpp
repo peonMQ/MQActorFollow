@@ -7,15 +7,6 @@ std::map<std::chrono::seconds, ImVec4, std::greater<std::chrono::seconds>> MQAct
 	{std::chrono::seconds(0),   MQActorFollowUI::ColorRed},
 };
 
-// Constructor
-MQActorFollowUI::MQActorFollowUI()
-	: showActorFollowUI(actorfollow::SettingsManager::Instance().Get().show_ui_on_startup),
-	m_selectedTab(static_cast<int>(TabPage::Settings))
-{
-	/*int val = showActorFollowUI ? 1 : 0;
-	WriteChatColorf("[MQActorFollow] MQActorFollowUI initialized %d", val);*/
-}
-
 // Helpers
 std::tuple<int, int> MQActorFollowUI::ToMinutesAndSeconds(const std::chrono::seconds& time)
 {
@@ -38,7 +29,7 @@ ImVec4 MQActorFollowUI::GetColor(std::chrono::seconds time)
 void MQActorFollowUI::DrawSettingsUI()
 {
 	bool changed = false;
-	auto& settings = actorfollow::SettingsManager::Instance().Mutable();
+	auto& settings = m_settingsManager.Mutable();
 
 	enum BreakBehavior { DoNothing = 0, Stop = 1, Pause = 2 };
 
@@ -96,7 +87,7 @@ void MQActorFollowUI::DrawSettingsUI()
 		ImGui::SetTooltip("The maximum time in seconds to reach a waypoint.");
 
 	if (changed)
-		actorfollow::SettingsManager::Instance().Save();
+		m_settingsManager.Save();
 
 	ImGui::Columns(1);
 }
@@ -153,8 +144,8 @@ void MQActorFollowUI::DrawSubscribersUI(const std::vector<std::shared_ptr<postof
 void MQActorFollowUI::PerformUpdateTab(TabPage page)
 {
 	if (page == TabPage::Settings) DrawSettingsUI();
-	else if (page == TabPage::Waypoints) DrawWaypointsUI(queueToVector(actorfollow::FollowController::Controller().GetPositionsCopy()));
-	else if (page == TabPage::Subscribers) DrawSubscribersUI(actorfollow::SubscriptionController::Instance().GetSubscribers());
+	else if (page == TabPage::Waypoints) DrawWaypointsUI(queueToVector(m_followController.GetPositionsCopy()));
+	else if (page == TabPage::Subscribers) DrawSubscribersUI(m_subscriptionController.GetSubscribers());
 }
 
 // -------------------- Main UI --------------------

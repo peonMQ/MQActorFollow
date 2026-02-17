@@ -14,7 +14,9 @@ namespace actorfollow {
 	class FollowController
 	{
 	public:
-		static FollowController& Controller();
+		FollowController(actorfollow::SettingsManager& settingsManager)
+			: state(FollowState::OFF), samePositionTimer(std::chrono::steady_clock::now()), m_settingsManager(settingsManager), m_movementController(actorfollow::MovementController(m_settingsManager)) {
+		}
 
 		FollowState GetState() const;
 		void SetState(FollowState newState);
@@ -32,10 +34,10 @@ namespace actorfollow {
 		std::queue<std::shared_ptr<proto::actorfollow::Position>> GetPositionsCopy() const;
 
 	private:
-		FollowController();
 		void PopDestination();
 
-		MovementController& movement = MovementController::Instance();
+		actorfollow::SettingsManager& m_settingsManager;
+		actorfollow::MovementController& m_movementController;
 		FollowState state;
 		std::queue<std::shared_ptr<proto::actorfollow::Position>> positions;
 		std::shared_ptr<proto::actorfollow::Position> lastPosition;

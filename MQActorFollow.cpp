@@ -11,6 +11,11 @@ const std::chrono::milliseconds UPDATE_TICK_MILLISECONDS = std::chrono::millisec
 
 class MQActorFollowType* pMQActorFollowType = nullptr;
 
+actorfollow::SettingsManager g_SettingsManager = actorfollow::SettingsManager();
+actorfollow::FollowController g_FollowController = actorfollow::FollowController(g_SettingsManager);
+actorfollow::SubscriptionController g_SubscriptionController = actorfollow::SubscriptionController(g_SettingsManager, g_FollowController);
+MQActorFollowUI g_MQActorFollowUI = MQActorFollowUI(g_SettingsManager, g_SubscriptionController, g_FollowController);
+
 class MQActorFollowType : public MQ2Type
 {
 public:
@@ -35,8 +40,6 @@ public:
         if (!pMember)
             return false;
 
-        auto& controller = FollowController::Controller();
-
         switch ((Members)(pMember->ID))
         {
         case MQActorFollowType::IsActive:
@@ -46,21 +49,21 @@ public:
 
         case MQActorFollowType::Status:
             Dest.Type = mq::datatypes::pIntType;
-            Dest.Int = static_cast<int>(controller.GetState());
+            Dest.Int = static_cast<int>(g_FollowController.GetState());
             return true;
 
         case MQActorFollowType::WaypointsCount:
             Dest.Type = mq::datatypes::pIntType;
-            Dest.Int = controller.WaypointCount();
+            Dest.Int = g_FollowController.WaypointCount();
             return true;
 
         case MQActorFollowType::IsFollowing:
-            Dest.DWord = (controller.GetState() == FollowState::ON);
+            Dest.DWord = (g_FollowController.GetState() == FollowState::ON);
             Dest.Type = mq::datatypes::pBoolType;
             return true;
 
         case MQActorFollowType::IsPaused:
-            Dest.DWord = (controller.GetState() == FollowState::PAUSED);
+            Dest.DWord = (g_FollowController.GetState() == FollowState::PAUSED);
             Dest.Type = mq::datatypes::pBoolType;
             return true;
         }
@@ -93,60 +96,58 @@ void FollowCommandHandler(SPAWNINFO* pChar, char* szLine) {
     char szArg1[MAX_STRING] = { 0 };
     GetArg(szArg1, szLine, 1);
 
-    auto& controller = FollowController::Controller();
-
     if (ci_equals(szArg1, "on")) {
-        if (actorfollow::SubscriptionController::Instance().HasSubscriptions()) {
+        if (g_SubscriptionController.HasSubscriptions()) {
             WriteChatf("[MQActorFollow] Im being followed so cannot follow others.");
             return;
         } else if (pTarget) {
-            actorfollow::SubscriptionController::Instance().Subscribe(pTarget);
+            g_SubscriptionController.Subscribe(pTarget);
         } else {
             WriteChatf("[MQActorFollow] No target specified.");
         }
     }
     else if (ci_equals(szArg1, "off")) {
-		actorfollow::SubscriptionController::Instance().Unsubscribe();
+		g_SubscriptionController.Unsubscribe();
     }
     else if (ci_equals(szArg1, "pause")) {
-        if (controller.GetState() == FollowState::ON) {
-            controller.SetState(FollowState::PAUSED);
+        if (g_FollowController.GetState() == FollowState::ON) {
+			g_FollowController.SetState(FollowState::PAUSED);
             WriteChatf("[MQActorFollow] Paused following.");
         }
     }
     else if (ci_equals(szArg1, "resume")) {
-        if (controller.GetState() == FollowState::PAUSED) {
-            controller.SetState(FollowState::ON);
+        if (g_FollowController.GetState() == FollowState::PAUSED) {
+			g_FollowController.SetState(FollowState::ON);
             WriteChatf("[MQActorFollow] Resumed following.");
         }
     }
     else if (ci_equals(szArg1, "ui")) {
-		if (MQActorFollowUI::Instance().IsVisible()) {
-			MQActorFollowUI::Instance().Hide();
+		if (g_MQActorFollowUI.IsVisible()) {
+			g_MQActorFollowUI.Hide();
 		}
 		else {
-			MQActorFollowUI::Instance().Show();
+			g_MQActorFollowUI.Show();
 		}
     }
     else if (ci_equals(szArg1, "id")) {
         auto spawnID = GetIntFromString(GetArg(szArg1, szLine, 2), 0);
         if (auto pSpawn = GetSpawnByID(spawnID)) {
-            if (actorfollow::SubscriptionController::Instance().HasSubscriptions()) {
+            if (g_SubscriptionController.HasSubscriptions()) {
                 WriteChatf("[MQActorFollow] Im being followed so cannot follow others.");
                 return;
             }
-			actorfollow::SubscriptionController::Instance().Subscribe(pSpawn);
+			g_SubscriptionController.Subscribe(pSpawn);
         } else {
             WriteChatf("[MQActorFollow] SpawnID not found \aw%s\ax.", spawnID);
         }
     }
     else {
         if (auto pSpawn = GetSpawnByName(szArg1)) {
-            if (actorfollow::SubscriptionController::Instance().HasSubscriptions()) {
+            if (g_SubscriptionController.HasSubscriptions()) {
                 WriteChatf("[MQActorFollow] Im being followed so cannot follow others.");
                 return;
             }
-			actorfollow::SubscriptionController::Instance().Subscribe(pSpawn);
+			g_SubscriptionController.Subscribe(pSpawn);
         } else {
             WriteChatf("[MQActorFollow] Character not found \aw%s\ax.", szArg1);
         }
@@ -157,8 +158,8 @@ void FollowCommandHandler(SPAWNINFO* pChar, char* szLine) {
 
 PLUGIN_API void InitializePlugin() {
     DebugSpewAlways("[MQActorFollow]::Initializing version %.2f", MQ2Version);
-	actorfollow::SettingsManager::Instance().Load();
-	actorfollow::SubscriptionController::Instance().Initialize();
+	g_SettingsManager.Load();
+	g_SubscriptionController.Initialize();
 
     AddCommand("/actfollow", FollowCommandHandler);
 	pMQActorFollowType = new MQActorFollowType;
@@ -167,7 +168,7 @@ PLUGIN_API void InitializePlugin() {
 
 PLUGIN_API void ShutdownPlugin() {
     DebugSpewAlways("[MQActorFollow]:: Shutting down");
-    actorfollow::SubscriptionController::Instance().Shutdown();
+    g_SubscriptionController.Shutdown();
     RemoveCommand("/actfollow");
     RemoveMQ2Data("ActorFollow");
     delete pMQActorFollowType;
@@ -176,8 +177,8 @@ PLUGIN_API void ShutdownPlugin() {
 // Reset following if leaving the game
 PLUGIN_API void SetGameState(int gameState) {
     if (gameState != GAMESTATE_INGAME) {
-		actorfollow::SubscriptionController::Instance().CancelSubscriptions();
-		actorfollow::SubscriptionController::Instance().Unsubscribe();
+		g_SubscriptionController.CancelSubscriptions();
+		g_SubscriptionController.Unsubscribe();
     }
 }
 
@@ -191,18 +192,18 @@ PLUGIN_API void OnPulse() {
     auto now = std::chrono::steady_clock::now();
     if (now > s_pulse_timer) {
         s_pulse_timer = now + UPDATE_TICK_MILLISECONDS;
-		actorfollow::SubscriptionController::Instance().SendUpdate(pLocalPC);
+		g_SubscriptionController.SendUpdate(pLocalPC);
     }
 
-    FollowController::Controller().TryFollowActor(pLocalPC, []() { SubscriptionController::Instance().Unsubscribe(); });
+	g_FollowController.TryFollowActor(pLocalPC, []() { g_SubscriptionController.Unsubscribe(); });
 }
 
 // Handle summon messages
 PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color) {
-    if (!_stricmp(Line, "You have been summoned!") && FollowController::Controller().GetState() == FollowState::ON)
+    if (!_stricmp(Line, "You have been summoned!") && g_FollowController.GetState() == FollowState::ON)
     {
         WriteChatf("[MQActorFollow]:: Summon detected. Breaking follow.");
-        FollowController::Controller().InterruptFollowing([]() { SubscriptionController::Instance().Unsubscribe(); });
+		g_FollowController.InterruptFollowing([]() { g_SubscriptionController.Unsubscribe(); });
     }
     return false;
 }
@@ -210,6 +211,6 @@ PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color) {
 // ImGui UI render
 PLUGIN_API void OnUpdateImGui() {	
     if (GetGameState() == GAMESTATE_INGAME) {
-        MQActorFollowUI::Instance().RenderUI();
+		g_MQActorFollowUI.RenderUI();
     }
 }

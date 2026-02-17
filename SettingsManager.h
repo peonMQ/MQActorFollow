@@ -18,11 +18,6 @@ namespace actorfollow {
 	class SettingsManager
 	{
 	public:
-		static SettingsManager& Instance() {
-			static SettingsManager instance;
-			return instance;
-		}
-
 		// Access current settings
 		const SettingsData& Get() const { return settings; }
 		SettingsData& Mutable() { return settings; }
@@ -37,7 +32,6 @@ namespace actorfollow {
 		}
 
 	private:
-		SettingsManager() = default;
 		SettingsData settings;
 	};
 

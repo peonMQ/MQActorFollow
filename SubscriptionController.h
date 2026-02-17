@@ -8,7 +8,24 @@ namespace actorfollow {
 	class SubscriptionController
 	{
 	public:
-		static SubscriptionController& Instance();
+		SubscriptionController(actorfollow::SettingsManager& settingsManager, actorfollow::FollowController& followController) : m_settingsManager(settingsManager), m_followController(followController)
+		{
+			dropbox = postoffice::AddActor([this](const std::shared_ptr<postoffice::Message>& msg) {
+				ReceivedMessageHandler(msg);
+				});
+			ClearSubscribers();
+			subscription.Server = std::nullopt;
+			subscription.Character = std::nullopt;
+			// Reset FollowController state
+			m_followController.StopFollowing();
+		}
+
+		~SubscriptionController()
+		{
+			CancelSubscriptions();
+			Unsubscribe();
+			dropbox.Remove();
+		}
 
 		void Initialize();
 		void Shutdown();
@@ -22,8 +39,6 @@ namespace actorfollow {
 		const std::vector<std::shared_ptr<postoffice::Address>>& GetSubscribers() const { return subscribers; }
 
 	private:
-		SubscriptionController() = default;
-
 		// Handlers
 		void ReceivedMessageHandler(const std::shared_ptr<postoffice::Message>& message);
 		void SetSubscription(std::string receiver);
@@ -38,6 +53,8 @@ namespace actorfollow {
 		);
 
 	private:
+		actorfollow::SettingsManager m_settingsManager;
+		actorfollow::FollowController m_followController;
 		postoffice::DropboxAPI dropbox;
 		postoffice::Address subscription;
 		std::vector<std::shared_ptr<postoffice::Address>> subscribers;

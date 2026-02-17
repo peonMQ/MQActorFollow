@@ -26,9 +26,8 @@ namespace actorfollow {
 
 	class MovementController {
 	public:
-		static MovementController& Instance() {
-			static MovementController instance;
-			return instance;
+		MovementController(actorfollow::SettingsManager& settingsManager) : m_settingsManager(settingsManager)
+		{
 		}
 
 		void Move(MovementDirection dir, KeyAction action);
@@ -45,6 +44,7 @@ namespace actorfollow {
 
 		MovementDirection currentDirection = MovementDirection::None;
 		bool isKeyHeld = false;
+		actorfollow::SettingsManager m_settingsManager;
 	};
 
 } // namespace actorfollow

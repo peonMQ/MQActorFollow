@@ -1,30 +1,20 @@
 #include "SubscriptionController.h"
 
-namespace actorfollow {
-
-	SubscriptionController& SubscriptionController::Instance()
-	{
-		static SubscriptionController instance;
-		return instance;
-	}
-
+namespace actorfollow 
+{
 	void SubscriptionController::Initialize()
 	{
-		dropbox = postoffice::AddActor([this](const std::shared_ptr<postoffice::Message>& msg) {
-			ReceivedMessageHandler(msg);
-			});
 		ClearSubscribers();
 		subscription.Server = std::nullopt;
 		subscription.Character = std::nullopt;
 		// Reset FollowController state
-		FollowController::Controller().StopFollowing();
+		m_followController.StopFollowing();
 	}
 
 	void SubscriptionController::Shutdown()
 	{
 		CancelSubscriptions();
 		Unsubscribe();
-		dropbox.Remove();
 	}
 
 	void SubscriptionController::Post(
@@ -47,7 +37,7 @@ namespace actorfollow {
 		subscription.Server = GetServerShortName();
 		subscription.Character = receiver;
 
-		FollowController::Controller().SetState(FollowState::ON);
+		m_followController.SetState(FollowState::ON);
 	}
 
 	void SubscriptionController::ClearSubscribers()
@@ -72,7 +62,7 @@ namespace actorfollow {
 		if (!subscription.Character)
 			return;
 
-		FollowController::Controller().StopFollowing();
+		m_followController.StopFollowing();
 		Post(subscription, proto::actorfollow::MessageId::UnSubscribe);
 		WriteChatf("[MQActorFollow] Stopped following \ay%s\ax.", subscription.Character.value().c_str());
 
@@ -187,14 +177,14 @@ namespace actorfollow {
 			if (pLocalPC->pSpawn->Zone != pos.zoneid())
 				return;
 
-			auto& controller = FollowController::Controller();
+			auto& controller = m_followController;
 			if (!controller.HasDestinations())
 			{
 				controller.EnqueueDestination(std::make_shared<mq::proto::actorfollow::Position>(pos));
 			}
 			else if (auto current = controller.GetCurrentDestination())
 			{
-				const auto& settings = actorfollow::SettingsManager::Instance().Get();
+				const auto& settings = m_settingsManager.Get();
 				float dist = GetDistance3D(current->x(), current->y(), current->z(),
 					pos.x(), pos.y(), pos.z());
 				if (dist > settings.waypoint_min_distance)

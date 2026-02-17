@@ -6,8 +6,8 @@
 #include "imgui/ImGuiUtils.h"
 
 #include "SettingsManager.h"
-#include "SubscriptionController.h"
 #include "ActorFollow.pb.h"
+#include "SubscriptionController.h"
 
 enum class TabPage
 {
@@ -20,10 +20,13 @@ enum class TabPage
 class MQActorFollowUI
 {
 public:
-	static MQActorFollowUI& Instance()
+	MQActorFollowUI(actorfollow::SettingsManager& settingsManager, actorfollow::SubscriptionController& subscriptionController, actorfollow::FollowController& followController)
+		: m_settingsManager(settingsManager), 
+		m_followController(followController),
+		m_subscriptionController(subscriptionController),
+		showActorFollowUI(settingsManager.Get().show_ui_on_startup),
+		m_selectedTab(static_cast<int>(TabPage::Settings))
 	{
-		static MQActorFollowUI instance;
-		return instance;
 	}
 
 	void RenderUI();
@@ -32,9 +35,9 @@ public:
 	bool IsVisible() const { return showActorFollowUI; }
 
 private:
-	MQActorFollowUI();
-	MQActorFollowUI(const MQActorFollowUI&) = delete;
-	MQActorFollowUI& operator=(const MQActorFollowUI&) = delete;
+	actorfollow::SettingsManager& m_settingsManager;
+	actorfollow::FollowController& m_followController;
+	actorfollow::SubscriptionController& m_subscriptionController;
 
 	// Persistent UI open/close state
 	bool showActorFollowUI;
