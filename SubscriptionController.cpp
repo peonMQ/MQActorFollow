@@ -8,7 +8,7 @@ namespace actorfollow
 		subscription.Server = std::nullopt;
 		subscription.Character = std::nullopt;
 		// Reset FollowController state
-		m_followController.StopFollowing();
+		m_followController->StopFollowing();
 	}
 
 	void SubscriptionController::Shutdown()
@@ -37,7 +37,7 @@ namespace actorfollow
 		subscription.Server = GetServerShortName();
 		subscription.Character = receiver;
 
-		m_followController.SetState(FollowState::ON);
+		m_followController->SetState(FollowState::ON);
 	}
 
 	void SubscriptionController::ClearSubscribers()
@@ -62,7 +62,7 @@ namespace actorfollow
 		if (!subscription.Character)
 			return;
 
-		m_followController.StopFollowing();
+		m_followController->StopFollowing();
 		Post(subscription, proto::actorfollow::MessageId::UnSubscribe);
 		WriteChatf("[MQActorFollow] Stopped following \ay%s\ax.", subscription.Character.value().c_str());
 
@@ -178,18 +178,18 @@ namespace actorfollow
 				return;
 
 			auto& controller = m_followController;
-			if (!controller.HasDestinations())
+			if (!controller->HasDestinations())
 			{
-				controller.EnqueueDestination(std::make_shared<mq::proto::actorfollow::Position>(pos));
+				controller->EnqueueDestination(std::make_shared<mq::proto::actorfollow::Position>(pos));
 			}
-			else if (auto current = controller.GetCurrentDestination())
+			else if (auto current = controller->GetCurrentDestination())
 			{
-				const auto& settings = m_settingsManager.Get();
+				const auto& settings = m_settingsManager->Get();
 				float dist = GetDistance3D(current->x(), current->y(), current->z(),
 					pos.x(), pos.y(), pos.z());
 				if (dist > settings.waypoint_min_distance)
 				{
-					controller.EnqueueDestination(std::make_shared<mq::proto::actorfollow::Position>(pos));
+					controller->EnqueueDestination(std::make_shared<mq::proto::actorfollow::Position>(pos));
 				}
 			}
 		} break;

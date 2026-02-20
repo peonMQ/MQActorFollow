@@ -20,11 +20,11 @@ enum class TabPage
 class MQActorFollowUI
 {
 public:
-	MQActorFollowUI(actorfollow::SettingsManager& settingsManager, actorfollow::SubscriptionController& subscriptionController, actorfollow::FollowController& followController)
+	MQActorFollowUI(actorfollow::SettingsManager* settingsManager, actorfollow::SubscriptionController* subscriptionController, actorfollow::FollowController* followController)
 		: m_settingsManager(settingsManager), 
 		m_followController(followController),
 		m_subscriptionController(subscriptionController),
-		showActorFollowUI(settingsManager.Get().show_ui_on_startup),
+		showActorFollowUI(settingsManager->Get().show_ui_on_startup),
 		m_selectedTab(static_cast<int>(TabPage::Settings))
 	{
 	}
@@ -35,9 +35,9 @@ public:
 	bool IsVisible() const { return showActorFollowUI; }
 
 private:
-	actorfollow::SettingsManager& m_settingsManager;
-	actorfollow::FollowController& m_followController;
-	actorfollow::SubscriptionController& m_subscriptionController;
+	actorfollow::SettingsManager* m_settingsManager;
+	actorfollow::FollowController* m_followController;
+	actorfollow::SubscriptionController* m_subscriptionController;
 
 	// Persistent UI open/close state
 	bool showActorFollowUI;

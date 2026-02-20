@@ -29,7 +29,7 @@ ImVec4 MQActorFollowUI::GetColor(std::chrono::seconds time)
 void MQActorFollowUI::DrawSettingsUI()
 {
 	bool changed = false;
-	auto& settings = m_settingsManager.Mutable();
+	auto& settings = m_settingsManager->Mutable();
 
 	enum BreakBehavior { DoNothing = 0, Stop = 1, Pause = 2 };
 
@@ -87,7 +87,7 @@ void MQActorFollowUI::DrawSettingsUI()
 		ImGui::SetTooltip("The maximum time in seconds to reach a waypoint.");
 
 	if (changed)
-		m_settingsManager.Save();
+		m_settingsManager->Save();
 
 	ImGui::Columns(1);
 }
@@ -144,8 +144,8 @@ void MQActorFollowUI::DrawSubscribersUI(const std::vector<std::shared_ptr<postof
 void MQActorFollowUI::PerformUpdateTab(TabPage page)
 {
 	if (page == TabPage::Settings) DrawSettingsUI();
-	else if (page == TabPage::Waypoints) DrawWaypointsUI(queueToVector(m_followController.GetPositionsCopy()));
-	else if (page == TabPage::Subscribers) DrawSubscribersUI(m_subscriptionController.GetSubscribers());
+	else if (page == TabPage::Waypoints) DrawWaypointsUI(queueToVector(m_followController->GetPositionsCopy()));
+	else if (page == TabPage::Subscribers) DrawSubscribersUI(m_subscriptionController->GetSubscribers());
 }
 
 // -------------------- Main UI --------------------

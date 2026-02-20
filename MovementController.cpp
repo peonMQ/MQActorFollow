@@ -99,7 +99,7 @@ namespace actorfollow {
 	}
 
 	void MovementController::AttemptToOpenDoor() {
-		const auto& settings = m_settingsManager.Get();
+		const auto& settings = m_settingsManager->Get();
 		if (!settings.open_doors) return;
 
 		static std::chrono::steady_clock::time_point openDoorTimer = std::chrono::steady_clock::now();
@@ -120,7 +120,7 @@ namespace actorfollow {
 	}
 
 	bool MovementController::IsStuck(PcClient* pcClient) {
-		const auto& settings = m_settingsManager.Get();
+		const auto& settings = m_settingsManager->Get();
 		if (!settings.attempt_unstuck) return false;
 
 		static std::chrono::steady_clock::time_point stuckTimer = std::chrono::steady_clock::now();

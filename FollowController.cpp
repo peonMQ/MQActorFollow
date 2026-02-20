@@ -20,7 +20,7 @@ namespace actorfollow
 			return nullptr;
 		}
 		else if (lastPosition != newDestination) {
-			auto& settings = m_settingsManager.Get();
+			auto& settings = m_settingsManager->Get();
 			samePositionTimer = now + std::chrono::milliseconds(settings.waypoint_timeout_seconds * 1000);
 			lastPosition = newDestination;
 		}
@@ -29,7 +29,7 @@ namespace actorfollow
 
 	void FollowController::PopDestination() {
 		if (!positions.empty()) positions.pop();
-		if (positions.empty()) m_movementController.StopMoving();
+		if (positions.empty()) m_movementController->StopMoving();
 	}
 
 	// Movement
@@ -39,7 +39,7 @@ namespace actorfollow
 			if (auto pSpawn = pcClient->pSpawn)
 			{
 				if (auto destination = GetCurrentDestination()) {
-					auto& settings = m_settingsManager.Get();
+					auto& settings = m_settingsManager->Get();
 					if (destination->zoneid() == pSpawn->Zone) {
 						auto position = CVector3{ destination->x(), destination->y(), destination->z() };
 						auto distance3d = GetDistance3D(pSpawn->X, pSpawn->Y, pSpawn->Z, position.X, position.Y, position.Z);
@@ -51,7 +51,7 @@ namespace actorfollow
 
 						if (distance3d > settings.waypoint_min_distance) {
 							DebugSpewAlways("[MQActorFollow] TryFollowActor (\aw%.5f\ax)...", distance3d);
-							m_movementController.MoveTowards(pcClient, position);
+							m_movementController->MoveTowards(pcClient, position);
 						}
 						else {
 							PopDestination();
@@ -68,12 +68,12 @@ namespace actorfollow
 
 	void FollowController::StopFollowing() {
 		state = FollowState::OFF;
-		m_movementController.StopMoving();
+		m_movementController->StopMoving();
 		ClearDestinations();
 	}
 
 	void FollowController::InterruptFollowing(const std::function<void()>& unsubscribeCallback) {
-		auto& settings = m_settingsManager.Get();
+		auto& settings = m_settingsManager->Get();
 		if (settings.autobreak) {
 			unsubscribeCallback();
 		}
