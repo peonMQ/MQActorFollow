@@ -16,6 +16,7 @@
 
 #include <mq/Plugin.h>
 #include "routing/PostOffice.h"
+#include "mq/contrib/protobuf/ProtobufLibs.h"
 #include "MQActorFollowUI.h"
 #include "SubscriptionController.h"
 
