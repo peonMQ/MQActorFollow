@@ -42,7 +42,7 @@ namespace actorfollow
 					auto& settings = m_settingsManager->Get();
 					if (destination->zoneid() == pSpawn->Zone) {
 						auto position = CVector3{ destination->x(), destination->y(), destination->z() };
-						auto distance3d = GetDistance3D(pSpawn->X, pSpawn->Y, pSpawn->Z, position.X, position.Y, position.Z);
+						auto distance3d = GetDistance(pSpawn->X, pSpawn->Y, pSpawn->Z, position.X, position.Y, position.Z);
 						if (distance3d < 0 || distance3d > settings.warp_alert_distance) {
 							WriteChatf("[MQActorFollow] Possible warp detected, exiting (\aw%.5f\ax)...", distance3d);
 							unsubscribeCallback();
