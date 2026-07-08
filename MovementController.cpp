@@ -112,7 +112,7 @@ namespace actorfollow {
 		openDoorTimer = now + std::chrono::milliseconds(500);
 
 		auto pSwitch = FindSwitchByName();
-		if (pSwitch && GetDistance(pSwitch->X, pSwitch->Y) < 25 &&
+		if (pSwitch && GetDistanceFromPlayer(pSwitch->X, pSwitch->Y) < 25 &&
 			(pSwitch->State == (BYTE)DoorState::Closed || pSwitch->State == (BYTE)DoorState::Closing))
 		{
 			pSwitch->UseSwitch(pLocalPC->pSpawn->SpawnID, 0xFFFFFFFF, 0, nullptr);
@@ -135,7 +135,7 @@ namespace actorfollow {
 
 		if (playerClient->SpeedMultiplier != -10000
 			&& FindSpeed(playerClient)
-			&& (GetDistance(previousX, previousY) <= FindSpeed(playerClient) / 600)
+			&& (GetDistanceFromPlayer(previousX, previousY) <= FindSpeed(playerClient) / 600)
 			&& !pcClient->Stunned)
 		{
 			isStuck = true;

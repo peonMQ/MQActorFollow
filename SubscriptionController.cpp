@@ -185,7 +185,7 @@ namespace actorfollow
 			else if (auto current = controller->GetCurrentDestination())
 			{
 				const auto& settings = m_settingsManager->Get();
-				float dist = GetDistance3D(current->x(), current->y(), current->z(),
+				float dist = GetDistance(current->x(), current->y(), current->z(),
 					pos.x(), pos.y(), pos.z());
 				if (dist > settings.waypoint_min_distance)
 				{

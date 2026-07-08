@@ -110,7 +110,7 @@ void MQActorFollowUI::DrawWaypointsUI(const std::vector<std::shared_ptr<proto::a
 			if (pLocalPC && pLocalPC->pSpawn) {
 				auto pSpawn = pLocalPC->pSpawn;
 				auto pos = CVector3{ waypoint->x(), waypoint->y(), waypoint->z() };
-				auto distance = GetDistance3D(pos.X, pos.Y, pos.Z, pSpawn->X, pSpawn->Y, pSpawn->Z);
+				auto distance = GetDistance(pos.X, pos.Y, pos.Z, pSpawn->X, pSpawn->Y, pSpawn->Z);
 				ImGui::Text("%.2f", distance);
 			}
 			else {
